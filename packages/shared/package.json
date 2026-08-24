@@ -1,0 +1,11 @@
+{
+  "name": "@sala13/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./game-catalog": "./src/game-catalog.js",
+    "./protocol": "./src/protocol.js"
+  }
+}

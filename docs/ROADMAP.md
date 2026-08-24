@@ -1,0 +1,116 @@
+# Incremental delivery roadmap
+
+The project is intentionally split into vertical slices. A “finished” engine
+includes server rules, private projections, tests, browser UI, reconnect and
+Info—not only a board that can be clicked.
+
+## Phase 0 — platform kernel (included)
+
+- monorepo, static frontend and Express/Socket.IO server;
+- public/private lobby lifecycle and adaptive capacity;
+- validation, rate limit, versions and room cleanup;
+- responsive menu and dynamic Info system;
+- Tic-Tac-Toe vertical slice;
+- deployment and CI templates.
+
+Exit: two browsers can create, discover, join, play, reconnect and leave.
+
+## Phase 1 — visible-state board games
+
+1. Connect Four: gravity and four-direction scan.
+2. Checkers: forced capture and multi-jump paths.
+3. Chess: integrate/test a maintained rules library.
+
+Exit: shared board component, move history and draw/result patterns are stable.
+
+## Phase 2 — hidden information
+
+1. Battleship: private projections and placement validation.
+2. Briscola: secure deck, hands, trick evaluator and teams.
+3. Scopa: subset captures and complete scoring breakdown.
+
+Exit: automated tests prove that opponent socket payloads never contain hidden
+cards or ship cells.
+
+## Phase 3 — timed word games
+
+1. Hangman: Unicode-aware normalization and SVG stage.
+2. Categories: default/custom category selection, deadlines, reveal and votes.
+
+Exit: server deadlines remain correct with simulated slow/disconnected clients.
+
+## Phase 4 — richer card state machines
+
+1. Blackjack: chips, split hands, double and dealer policy.
+2. Uno: action pipeline and explicit stacking variants.
+3. Burraco: meld validator, pozzetti and explained scoring.
+
+Exit: property/fixture tests cover card conservation—every physical card is in
+exactly one valid zone at every transition.
+
+## Phase 5 — drawing modes
+
+- batched normalized vector strokes;
+- authoritative drawer permission and operation sequence;
+- snapshot/reconnect;
+- drawing/guess rotation;
+- private pass-the-prompt chains and final reveal;
+- moderation and strict resource limits.
+
+Exit: a phone can draw smoothly while several viewers receive the same ordered
+result, and refresh reconstructs the canvas.
+
+## Phase 6 — Texas Hold'em
+
+- seating/button/blinds;
+- betting action and minimum-raise rules;
+- all-in side pots;
+- evaluator fixtures;
+- secure hole-card views and showdown policy;
+- chip conservation invariants.
+
+Poker is last because incorrect side-pot or action-reopen logic can appear to
+work in normal hands while failing on rare combinations.
+
+## Phase 7 — operational hardening
+
+- server-issued signed sessions;
+- SQLite users/results and migrations;
+- admin kick/ban and content reports;
+- structured logs and metrics;
+- load test on target Raspberry Pi;
+- backup/recovery drill;
+- privacy and acceptable-use text;
+- optional Redis only if multiple Node instances are actually needed.
+
+## Suggested two-person split
+
+Do not permanently assign “frontend” to one student and “backend” to the other;
+that creates knowledge silos. Split by vertical slice and review each other's
+engine/UI pair.
+
+| Sprint | Student A | Student B | Joint review |
+| --- | --- | --- | --- |
+| 1 | Connect Four engine/tests | Connect Four renderer/accessibility | two-browser test |
+| 2 | Battleship placement/view | Battleship grids/effects | secret-payload audit |
+| 3 | Briscola engine | reusable card-hand UI | reconnect/card conservation |
+| 4 | Categories phases | forms/voting UI | deadline/network throttle |
+
+Every pull request should include rule references, tests, screenshots for
+layout changes and a short manual test script.
+
+## School presentation storyline
+
+1. Explain why WebSockets are needed.
+2. Create a public room on the Raspberry Pi.
+3. Join from a phone on a different network through Tailscale.
+4. Show that private rooms do not appear publicly.
+5. Play Tic-Tac-Toe and deliberately send/demonstrate an invalid second move.
+6. Open Info to show shared rules and SVG examples.
+7. Refresh a player to demonstrate reconnect.
+8. Show the server-only engine test that detects the winner.
+9. Present one hidden-information projection example.
+10. Close both browsers and show automatic lobby cleanup.
+
+That demonstration proves architecture, security boundaries and deployment—not
+only visual styling.

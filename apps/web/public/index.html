@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f2eee4" />
+    <meta
+      name="description"
+      content="Sala13: piattaforma multiplayer self-hosted per giocare dal browser."
+    />
+    <title>Sala13 — giochi allo stesso tavolo, ovunque</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script type="module" src="/js/main.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="Sala13, torna alla home">
+        <span class="brand-mark" aria-hidden="true">13</span>
+        <span>Sala13</span>
+      </a>
+      <div class="connection-pill" id="connection-pill" data-state="connecting">
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span id="connection-label">Connessione…</span>
+      </div>
+    </header>
+
+    <main>
+      <section id="home-view" class="view home-view">
+        <div class="hero">
+          <p class="eyebrow">Multiplayer self-hosted</p>
+          <h1>Un tavolo.<br />Tredici modi di giocare.</h1>
+          <p class="hero-copy">
+            Crea una stanza dal computer o dal Raspberry Pi. Gli altri entrano dal browser,
+            anche da reti diverse.
+          </p>
+          <div class="hero-actions">
+            <button class="button button-primary" id="open-create-button" type="button">
+              Crea una stanza
+            </button>
+            <a class="button button-quiet" href="#public-lobbies">Vedi stanze pubbliche</a>
+          </div>
+        </div>
+
+        <aside class="join-card" aria-labelledby="join-title">
+          <div>
+            <p class="section-kicker">Invito privato</p>
+            <h2 id="join-title">Hai un codice?</h2>
+          </div>
+          <form id="join-form" class="stack-form">
+            <label>
+              Nome giocatore
+              <input id="join-name" name="name" minlength="2" maxlength="20" autocomplete="nickname" required />
+            </label>
+            <label>
+              Codice stanza
+              <input
+                id="join-code"
+                name="code"
+                class="room-code-input"
+                minlength="4"
+                maxlength="10"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="ABC123"
+                required
+              />
+            </label>
+            <label>
+              Password <span class="optional">facoltativa</span>
+              <input id="join-password" name="password" type="password" maxlength="64" autocomplete="current-password" />
+            </label>
+            <button class="button button-dark" type="submit">Entra nella stanza</button>
+          </form>
+        </aside>
+
+        <section class="content-section" id="public-lobbies" aria-labelledby="lobby-heading">
+          <div class="section-heading-row">
+            <div>
+              <p class="section-kicker">In diretta</p>
+              <h2 id="lobby-heading">Stanze pubbliche</h2>
+            </div>
+            <span class="count-label" id="lobby-count">0 aperte</span>
+          </div>
+          <div id="lobby-list" class="lobby-list" aria-live="polite"></div>
+        </section>
+
+        <section class="content-section" aria-labelledby="games-heading">
+          <div class="section-heading-row games-heading-row">
+            <div>
+              <p class="section-kicker">Catalogo</p>
+              <h2 id="games-heading">Scegli il gioco</h2>
+            </div>
+            <p class="catalog-note">Il Tris è la vertical slice giocabile; gli altri motori hanno blueprint pronto.</p>
+          </div>
+          <div id="game-grid" class="game-grid"></div>
+        </section>
+      </section>
+
+      <section id="room-view" class="view room-view" hidden>
+        <div class="room-topbar">
+          <div>
+            <button class="text-button" id="leave-room-button" type="button">Torna al menu</button>
+            <p class="section-kicker" id="room-game-tag">Stanza</p>
+            <h1 id="room-game-name">Gioco</h1>
+          </div>
+          <button class="room-code-card" id="copy-room-code" type="button" title="Copia codice stanza">
+            <span>Codice stanza</span>
+            <strong id="room-code-label">------</strong>
+          </button>
+        </div>
+
+        <div class="room-layout">
+          <aside class="players-panel">
+            <div class="panel-title-row">
+              <h2>Giocatori</h2>
+              <span id="room-capacity">0 / 0</span>
+            </div>
+            <ul id="player-list" class="player-list"></ul>
+            <div class="room-controls" id="room-controls">
+              <button class="button button-dark" id="ready-button" type="button">Sono pronto</button>
+              <button class="button button-primary" id="start-button" type="button" hidden>Avvia partita</button>
+            </div>
+          </aside>
+
+          <section class="game-stage" id="game-stage" aria-live="polite"></section>
+        </div>
+
+        <button class="info-fab" id="room-info-button" type="button" aria-label="Informazioni e regole del gioco">
+          i
+        </button>
+      </section>
+    </main>
+
+    <dialog id="create-room-dialog" class="modal create-modal">
+      <form method="dialog" class="modal-shell" id="create-room-form">
+        <div class="modal-heading">
+          <div>
+            <p class="section-kicker">Nuovo tavolo</p>
+            <h2>Crea una stanza</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Chiudi" type="submit">×</button>
+        </div>
+
+        <div class="modal-content stack-form">
+          <label>
+            Gioco
+            <select id="create-game" name="gameId" required></select>
+          </label>
+          <label>
+            Nome giocatore
+            <input id="create-name" name="name" minlength="2" maxlength="20" autocomplete="nickname" required />
+          </label>
+
+          <fieldset>
+            <legend>Visibilità</legend>
+            <div class="segmented-control">
+              <label><input type="radio" name="visibility" value="public" checked /> Pubblica</label>
+              <label><input type="radio" name="visibility" value="private" /> Privata</label>
+            </div>
+          </fieldset>
+
+          <label id="create-password-row" hidden>
+            Password <span class="optional">facoltativa: il codice funziona comunque</span>
+            <input id="create-password" name="password" type="password" maxlength="64" autocomplete="new-password" />
+          </label>
+
+          <label>
+            Giocatori massimi
+            <select id="create-max-players" name="maxPlayers"></select>
+          </label>
+
+          <p class="form-note" id="implementation-note"></p>
+          <button class="button button-primary" id="create-submit" value="default" type="submit">
+            Crea stanza
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="info-dialog" class="modal info-modal">
+      <article class="modal-shell info-shell">
+        <div class="modal-heading">
+          <div>
+            <p class="section-kicker" id="info-tag">Regole</p>
+            <h2 id="info-title">Informazioni</h2>
+          </div>
+          <button class="icon-button" id="close-info-button" aria-label="Chiudi" type="button">×</button>
+        </div>
+        <div class="info-intro">
+          <p id="info-description"></p>
+          <div class="info-example" id="info-example"></div>
+        </div>
+        <div class="info-tabs" role="tablist" aria-label="Livello di dettaglio">
+          <button type="button" role="tab" id="quick-tab" aria-selected="true">In breve</button>
+          <button type="button" role="tab" id="deep-tab" aria-selected="false">Approfondimento</button>
+        </div>
+        <div class="info-body" id="info-body"></div>
+      </article>
+    </dialog>
+
+    <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>

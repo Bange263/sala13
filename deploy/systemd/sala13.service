@@ -1,0 +1,32 @@
+[Unit]
+Description=Sala13 multiplayer game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sala13
+Group=sala13
+WorkingDirectory=/opt/sala13
+EnvironmentFile=-/etc/sala13.env
+ExecStart=/usr/bin/node /opt/sala13/apps/server/src/index.js
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+KillSignal=SIGTERM
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

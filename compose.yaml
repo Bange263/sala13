@@ -1,0 +1,20 @@
+services:
+  sala13:
+    build:
+      context: .
+    image: sala13:local
+    init: true
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      # Safe default for Tailscale Serve or a local reverse proxy. Change the
+      # left side to "3000" only when direct LAN access is intentionally needed.
+      - "127.0.0.1:3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

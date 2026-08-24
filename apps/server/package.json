@@ -1,0 +1,22 @@
+{
+  "name": "@sala13/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=../../.env src/index.js",
+    "start": "node --env-file-if-exists=../../.env src/index.js",
+    "test": "node --test",
+    "check": "node --check src/index.js && node --check src/realtime/register-socket-handlers.js"
+  },
+  "dependencies": {
+    "@sala13/shared": "*",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "socket.io": "^4.8.1",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}
