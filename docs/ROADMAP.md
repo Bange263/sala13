@@ -4,6 +4,14 @@ The project is intentionally split into vertical slices. A “finished” engine
 includes server rules, private projections, tests, browser UI, reconnect and
 Info—not only a board that can be clicked.
 
+## v0.2 checkpoint
+
+Phases 0–6 now have a playable core in the repository: every catalogue entry
+has an authoritative engine, player-specific projection and browser controls.
+The phase descriptions below are retained as the acceptance checklist for
+deeper rule fixtures and hardening. Phase 7 remains open and is required before
+an untrusted public deployment.
+
 ## Phase 0 — platform kernel (included)
 
 - monorepo, static frontend and Express/Socket.IO server;

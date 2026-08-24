@@ -6,8 +6,8 @@ export const GAME_CATALOG = Object.freeze([
     name: "Blackjack",
     tag: "Carte",
     description: "Tavolo cooperativo-competitivo contro il banco, con puntate e decisioni simultanee.",
-    players: { min: 2, max: 7, label: "2–7" },
-    implementation: "blueprint",
+    players: { min: 2, max: 12, label: "2–12" },
+    implementation: "playable",
     accent: "#a64b35",
     rules: {
       quick: [
@@ -28,8 +28,8 @@ export const GAME_CATALOG = Object.freeze([
     name: "Uno",
     tag: "Carte",
     description: "Partite rapide con colori, carte azione e regole di accumulo configurabili.",
-    players: { min: 2, max: 10, label: "2–10" },
-    implementation: "blueprint",
+    players: { min: 2, max: 20, label: "2–20" },
+    implementation: "playable",
     accent: "#c33b2f",
     rules: {
       quick: [
@@ -51,7 +51,7 @@ export const GAME_CATALOG = Object.freeze([
     tag: "Carte napoletane",
     description: "La tradizione italiana con prese, scope, Primiera, Settebello, Denari e Carte.",
     players: { min: 2, max: 4, label: "2 o 4", allowed: [2, 4] },
-    implementation: "blueprint",
+    implementation: "playable",
     accent: "#b9782c",
     rules: {
       quick: [
@@ -73,7 +73,7 @@ export const GAME_CATALOG = Object.freeze([
     tag: "Carte napoletane",
     description: "Prese tattiche con seme di briscola, ordine speciale delle carte e 120 punti totali.",
     players: { min: 2, max: 4, label: "2 o 4", allowed: [2, 4] },
-    implementation: "blueprint",
+    implementation: "playable",
     accent: "#6b7f39",
     rules: {
       quick: [
@@ -94,8 +94,8 @@ export const GAME_CATALOG = Object.freeze([
     name: "Texas Hold'em",
     tag: "Poker",
     description: "Tavolo a chip con bui, quattro giri di puntate e valutazione completa delle mani.",
-    players: { min: 2, max: 10, label: "2–10" },
-    implementation: "blueprint",
+    players: { min: 2, max: 12, label: "2–12" },
+    implementation: "playable",
     accent: "#315b4a",
     rules: {
       quick: [
@@ -117,7 +117,7 @@ export const GAME_CATALOG = Object.freeze([
     tag: "Carte",
     description: "Scale, gruppi, pozzetto e burraco pulito o sporco in partite a coppie o individuali.",
     players: { min: 2, max: 4, label: "2–4" },
-    implementation: "blueprint",
+    implementation: "playable",
     accent: "#7c5941",
     rules: {
       quick: [
@@ -139,7 +139,7 @@ export const GAME_CATALOG = Object.freeze([
     tag: "Strategia",
     description: "Piazzamento segreto, fuoco alternato e riscontro immediato di acqua, colpito e affondato.",
     players: { min: 2, max: 2, label: "2" },
-    implementation: "blueprint",
+    implementation: "playable",
     accent: "#406b72",
     rules: {
       quick: [
@@ -161,7 +161,7 @@ export const GAME_CATALOG = Object.freeze([
     tag: "Scacchiera",
     description: "Due motori separati sulla stessa scacchiera, con mosse validate e gestione di vittoria o patta.",
     players: { min: 2, max: 2, label: "2" },
-    implementation: "blueprint",
+    implementation: "playable",
     accent: "#4f5147",
     rules: {
       quick: [
@@ -204,8 +204,8 @@ export const GAME_CATALOG = Object.freeze([
     name: "Nomi, Cose, Città",
     tag: "Parole",
     description: "Categorie selezionabili, lettera globale, timer condiviso e validazione a voto.",
-    players: { min: 2, max: 20, label: "2–20" },
-    implementation: "blueprint",
+    players: { min: 2, max: 40, label: "2–40" },
+    implementation: "playable",
     accent: "#9a6b27",
     rules: {
       quick: [
@@ -226,8 +226,8 @@ export const GAME_CATALOG = Object.freeze([
     name: "L'Impiccato",
     tag: "Parole",
     description: "Parole nascoste, lettere condivise e disegno SVG aggiornato a ogni errore.",
-    players: { min: 2, max: 12, label: "2–12" },
-    implementation: "blueprint",
+    players: { min: 2, max: 30, label: "2–30" },
+    implementation: "playable",
     accent: "#6e5849",
     rules: {
       quick: [
@@ -249,7 +249,7 @@ export const GAME_CATALOG = Object.freeze([
     tag: "Strategia",
     description: "Gettoni con gravità su griglia 7×6 e rilevamento delle linee in quattro direzioni.",
     players: { min: 2, max: 2, label: "2" },
-    implementation: "blueprint",
+    implementation: "playable",
     accent: "#bd6f2f",
     rules: {
       quick: [
@@ -270,8 +270,8 @@ export const GAME_CATALOG = Object.freeze([
     name: "Disegna & Passa",
     tag: "Disegno",
     description: "Canvas condivisa a turni, prompt segreti e catene disegno-testo in stile telefono senza fili.",
-    players: { min: 2, max: 12, label: "2–12" },
-    implementation: "blueprint",
+    players: { min: 2, max: 24, label: "2–24" },
+    implementation: "playable",
     accent: "#42705b",
     rules: {
       quick: [

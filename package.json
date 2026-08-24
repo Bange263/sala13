@@ -1,6 +1,6 @@
 {
   "name": "sala13",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A self-hosted real-time multiplayer game room for classrooms and friends.",
   "type": "module",
@@ -12,7 +12,7 @@
     "dev": "npm run dev --workspace @sala13/server",
     "start": "npm run start --workspace @sala13/server",
     "test": "npm run test --workspaces --if-present",
-    "check": "npm run check --workspaces --if-present"
+    "check": "node scripts/check-syntax.mjs"
   },
   "engines": {
     "node": ">=22.0.0"

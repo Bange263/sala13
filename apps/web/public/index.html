@@ -91,7 +91,7 @@
               <p class="section-kicker">Catalogo</p>
               <h2 id="games-heading">Scegli il gioco</h2>
             </div>
-            <p class="catalog-note">Il Tris è la vertical slice giocabile; gli altri motori hanno blueprint pronto.</p>
+            <p class="catalog-note">Tutte le modalità usano un motore server-authoritative e sono giocabili dal browser.</p>
           </div>
           <div id="game-grid" class="game-grid"></div>
         </section>
@@ -118,7 +118,8 @@
             </div>
             <ul id="player-list" class="player-list"></ul>
             <div class="room-controls" id="room-controls">
-              <button class="button button-dark" id="ready-button" type="button">Sono pronto</button>
+              <p class="ready-summary" id="ready-summary"></p>
+              <button class="button button-dark" id="ready-button" type="button">Segna come pronto</button>
               <button class="button button-primary" id="start-button" type="button" hidden>Avvia partita</button>
             </div>
           </aside>
@@ -139,7 +140,7 @@
             <p class="section-kicker">Nuovo tavolo</p>
             <h2>Crea una stanza</h2>
           </div>
-          <button class="icon-button" value="cancel" aria-label="Chiudi" type="submit">×</button>
+          <button class="icon-button" id="close-create-button" aria-label="Chiudi" type="button">×</button>
         </div>
 
         <div class="modal-content stack-form">
@@ -169,6 +170,51 @@
             Giocatori massimi
             <select id="create-max-players" name="maxPlayers"></select>
           </label>
+
+          <div class="game-settings" id="game-settings">
+            <label id="variant-setting" hidden>
+              Variante
+              <select id="create-variant" name="variant">
+                <option value="chess">Scacchi</option>
+                <option value="checkers">Dama</option>
+              </select>
+            </label>
+            <label id="mode-setting" hidden>
+              Modalità disegno
+              <select id="create-mode" name="mode">
+                <option value="draw">Disegna e indovina</option>
+                <option value="pass">Passa il prompt</option>
+              </select>
+            </label>
+            <label id="stacking-setting" class="checkbox-setting" hidden>
+              <input id="create-stacking" name="stacking" type="checkbox" />
+              Consenti accumulo +2 e +4
+            </label>
+            <label id="categories-setting" hidden>
+              Categorie <span class="optional">una per riga, minimo 2</span>
+              <textarea id="create-categories" name="categories" rows="5" placeholder="Nomi&#10;Cose&#10;Città&#10;Animali"></textarea>
+            </label>
+            <label id="timer-setting" hidden>
+              Durata round in secondi
+              <input id="create-round-seconds" name="roundSeconds" type="number" min="30" max="600" value="120" />
+            </label>
+            <label id="chips-setting" hidden>
+              Chip iniziali
+              <input id="create-starting-chips" name="startingChips" type="number" min="200" max="1000000" value="2000" />
+            </label>
+            <label id="bet-setting" hidden>
+              Puntata base suggerita
+              <input id="create-base-bet" name="baseBet" type="number" min="10" max="500" value="100" />
+            </label>
+            <label id="blind-setting" hidden>
+              Grande buio
+              <input id="create-big-blind" name="bigBlind" type="number" min="10" max="10000" value="20" />
+            </label>
+            <label id="soft17-setting" class="checkbox-setting" hidden>
+              <input id="create-soft17" name="dealerHitsSoft17" type="checkbox" />
+              Il banco pesca con soft 17
+            </label>
+          </div>
 
           <p class="form-note" id="implementation-note"></p>
           <button class="button button-primary" id="create-submit" value="default" type="submit">

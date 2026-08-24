@@ -86,3 +86,36 @@ test("serial state versions reject stale Tic-Tac-Toe actions", async (context) =
     (error) => error.code === ERROR_CODES.STALE_STATE
   );
 });
+
+test("start eligibility is false until every connected player is ready", (context) => {
+  const manager = new RoomManager(config);
+  context.after(() => manager.close());
+  const room = manager.createRoom({
+    ...player(1),
+    gameId: "tic-tac-toe",
+    settings: { maxPlayers: 2 },
+    visibility: "public"
+  });
+  manager.joinRoom({ ...player(2), code: room.code, password: "" });
+  assert.equal(room.getStartEligibility().canStart, false);
+  assert.throws(() => manager.start(player(1).socketId), (error) => error.code === ERROR_CODES.NOT_READY);
+  manager.setReady(player(1).socketId, true);
+  assert.equal(room.getStartEligibility().canStart, false);
+  manager.setReady(player(2).socketId, true);
+  assert.equal(room.getStartEligibility().canStart, true);
+  manager.setReady(player(2).socketId, false);
+  assert.equal(room.getStartEligibility().canStart, false);
+});
+
+test("secret Hangman word lists never appear in room settings sent to clients", (context) => {
+  const manager = new RoomManager(config);
+  context.after(() => manager.close());
+  const room = manager.createRoom({
+    ...player(1),
+    gameId: "hangman",
+    settings: { maxPlayers: 2, words: ["segretissima"] },
+    visibility: "private",
+    password: ""
+  });
+  assert.equal(room.viewFor(player(1).playerId).settings.words, undefined);
+});

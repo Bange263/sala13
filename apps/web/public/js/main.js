@@ -1,7 +1,7 @@
 import { GAME_CATALOG } from "/shared/game-catalog.js";
 import { CLIENT_EVENTS, ERROR_CODES, SERVER_EVENTS } from "/shared/protocol.js";
 import { createInfoModal } from "./components/info-modal.js";
-import { renderTicTacToe } from "./games/tic-tac-toe.js";
+import { renderGame } from "./games/game-renderer.js";
 
 const storageKeys = {
   playerId: "sala13.playerId",
@@ -48,6 +48,24 @@ const elements = {
   createPasswordRow: document.querySelector("#create-password-row"),
   createPassword: document.querySelector("#create-password"),
   createMaxPlayers: document.querySelector("#create-max-players"),
+  createVariant: document.querySelector("#create-variant"),
+  createMode: document.querySelector("#create-mode"),
+  createStacking: document.querySelector("#create-stacking"),
+  createCategories: document.querySelector("#create-categories"),
+  createRoundSeconds: document.querySelector("#create-round-seconds"),
+  createStartingChips: document.querySelector("#create-starting-chips"),
+  createBaseBet: document.querySelector("#create-base-bet"),
+  createBigBlind: document.querySelector("#create-big-blind"),
+  createSoft17: document.querySelector("#create-soft17"),
+  variantSetting: document.querySelector("#variant-setting"),
+  modeSetting: document.querySelector("#mode-setting"),
+  stackingSetting: document.querySelector("#stacking-setting"),
+  categoriesSetting: document.querySelector("#categories-setting"),
+  timerSetting: document.querySelector("#timer-setting"),
+  chipsSetting: document.querySelector("#chips-setting"),
+  betSetting: document.querySelector("#bet-setting"),
+  blindSetting: document.querySelector("#blind-setting"),
+  soft17Setting: document.querySelector("#soft17-setting"),
   implementationNote: document.querySelector("#implementation-note"),
   roomGameTag: document.querySelector("#room-game-tag"),
   roomGameName: document.querySelector("#room-game-name"),
@@ -56,6 +74,7 @@ const elements = {
   playerList: document.querySelector("#player-list"),
   roomControls: document.querySelector("#room-controls"),
   readyButton: document.querySelector("#ready-button"),
+  readySummary: document.querySelector("#ready-summary"),
   startButton: document.querySelector("#start-button"),
   gameStage: document.querySelector("#game-stage"),
   toastRegion: document.querySelector("#toast-region")
@@ -147,7 +166,7 @@ function renderGames() {
     const actions = document.createElement("div");
     actions.className = "game-card-actions";
     const create = button(
-      game.implementation === "playable" ? "Crea e gioca" : "Apri lobby",
+      "Crea e gioca",
       "button button-quiet",
       () => openCreateDialog(game.id)
     );
@@ -195,7 +214,7 @@ function populateGameSelect() {
   for (const game of GAME_CATALOG) {
     const option = document.createElement("option");
     option.value = game.id;
-    option.textContent = `${game.name}${game.implementation === "playable" ? " · giocabile" : " · blueprint"}`;
+    option.textContent = `${game.name} · giocabile`;
     fragment.append(option);
   }
   elements.createGame.replaceChildren(fragment);
@@ -216,9 +235,16 @@ function updateCreateGameOptions() {
   }
   elements.createMaxPlayers.replaceChildren(fragment);
   elements.createMaxPlayers.value = String(counts.at(-1));
-  elements.implementationNote.textContent = game.implementation === "playable"
-    ? "Motore completo disponibile: puoi avviare e giocare una partita sincronizzata."
-    : "Lobby e Info sono funzionanti; questo motore è documentato nel blueprint ma non è ancora giocabile nella versione starter.";
+  elements.variantSetting.hidden = game.id !== "chess-checkers";
+  elements.modeSetting.hidden = game.id !== "draw-and-pass";
+  elements.stackingSetting.hidden = game.id !== "uno";
+  elements.categoriesSetting.hidden = game.id !== "categories";
+  elements.timerSetting.hidden = !["categories", "draw-and-pass"].includes(game.id);
+  elements.chipsSetting.hidden = !["blackjack", "texas-holdem"].includes(game.id);
+  elements.betSetting.hidden = game.id !== "blackjack";
+  elements.blindSetting.hidden = game.id !== "texas-holdem";
+  elements.soft17Setting.hidden = game.id !== "blackjack";
+  elements.implementationNote.textContent = "Motore server-authoritative attivo: stato, turni e dati privati vengono validati dal server.";
 }
 
 function openCreateDialog(gameId = "tic-tac-toe") {
@@ -270,17 +296,15 @@ function renderPlayers(room) {
 
 function renderWaitingStage(room, game) {
   const wrapper = document.createElement("div");
-  wrapper.className = game.implementation === "playable" ? "waiting-stage" : "placeholder-stage";
+  wrapper.className = "waiting-stage";
   const inner = document.createElement("div");
   const number = document.createElement("p");
   number.className = "stage-number";
   number.textContent = String(room.players.length).padStart(2, "0");
   const heading = document.createElement("h2");
-  heading.textContent = game.implementation === "playable" ? "Il tavolo si sta formando" : "Lobby pronta, motore da collegare";
+  heading.textContent = "Il tavolo si sta formando";
   const paragraph = document.createElement("p");
-  paragraph.textContent = game.implementation === "playable"
-    ? "Condividi il codice, segnatevi tutti pronti e lascia che l'host avvii la partita."
-    : `La struttura multiplayer per ${game.name} funziona già. Regole di dominio, eventi e sicurezza sono specificati nei documenti del progetto.`;
+  paragraph.textContent = "Condividi il codice, segnatevi tutti pronti e lascia che l'host avvii la partita.";
   inner.append(number, heading, paragraph);
   wrapper.append(inner);
   elements.gameStage.replaceChildren(wrapper);
@@ -301,19 +325,20 @@ function renderRoom() {
 
   const canReady = room.status !== "playing";
   elements.roomControls.hidden = !canReady;
-  elements.readyButton.textContent = self?.ready ? "Non sono pronto" : "Sono pronto";
+  elements.readyButton.textContent = self?.ready ? "Pronto ✓ · annulla" : "Segna come pronto";
+  elements.readyButton.dataset.ready = String(Boolean(self?.ready));
   elements.startButton.hidden = room.hostPlayerId !== room.selfPlayerId;
-  const enoughPlayers = game.players.allowed
-    ? game.players.allowed.includes(connectedCount)
-    : connectedCount >= game.players.min;
-  elements.startButton.disabled = !enoughPlayers || room.players.some((player) => !player.connected || !player.ready);
+  const readyCount = room.players.filter((player) => player.connected && player.ready).length;
+  elements.readySummary.textContent = `${readyCount}/${connectedCount} pronti`;
+  elements.startButton.disabled = !room.startEligibility?.canStart;
+  elements.startButton.title = room.startEligibility?.canStart ? "Avvia la partita" : "Tutti i giocatori devono essere presenti e pronti";
 
-  if ((room.status === "playing" || room.status === "finished") && room.gameState && room.gameId === "tic-tac-toe") {
-    renderTicTacToe(elements.gameStage, room, async (cell) => {
+  if ((room.status === "playing" || room.status === "finished") && room.gameState) {
+    renderGame(elements.gameStage, room, async (action) => {
       try {
         await emitAck(CLIENT_EVENTS.GAME_ACTION, {
           expectedVersion: state.room.version,
-          action: { type: "place", cell }
+          action
         });
       } catch (error) {
         toast(error.message, "error");
@@ -390,23 +415,34 @@ elements.joinForm.addEventListener("submit", async (event) => {
 
 elements.createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (event.submitter?.value === "cancel") {
-    elements.createDialog.close();
-    return;
-  }
   if (!elements.createForm.reportValidity()) return;
 
   const name = elements.createName.value.trim();
   const visibility = new FormData(elements.createForm).get("visibility");
   persistName(name);
   try {
+    const settings = { maxPlayers: Number(elements.createMaxPlayers.value) };
+    if (elements.createGame.value === "chess-checkers") settings.variant = elements.createVariant.value;
+    if (elements.createGame.value === "draw-and-pass") settings.mode = elements.createMode.value;
+    if (elements.createGame.value === "uno") settings.stacking = elements.createStacking.checked;
+    if (["categories", "draw-and-pass"].includes(elements.createGame.value)) settings.roundSeconds = Number(elements.createRoundSeconds.value);
+    if (elements.createGame.value === "categories") {
+      const categories = elements.createCategories.value.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean);
+      if (categories.length > 0) settings.categories = categories;
+    }
+    if (["blackjack", "texas-holdem"].includes(elements.createGame.value)) settings.startingChips = Number(elements.createStartingChips.value);
+    if (elements.createGame.value === "blackjack") {
+      settings.baseBet = Number(elements.createBaseBet.value);
+      settings.dealerHitsSoft17 = elements.createSoft17.checked;
+    }
+    if (elements.createGame.value === "texas-holdem") settings.bigBlind = Number(elements.createBigBlind.value);
     const response = await emitAck(CLIENT_EVENTS.ROOM_CREATE, {
       gameId: elements.createGame.value,
       name,
       visibility,
       password: visibility === "private" ? elements.createPassword.value : "",
       playerId: state.playerId,
-      settings: { maxPlayers: Number(elements.createMaxPlayers.value) }
+      settings
     });
     elements.createPassword.value = "";
     elements.createDialog.close();
@@ -424,6 +460,7 @@ elements.createForm.addEventListener("change", (event) => {
 });
 
 document.querySelector("#open-create-button").addEventListener("click", () => openCreateDialog());
+document.querySelector("#close-create-button").addEventListener("click", () => elements.createDialog.close());
 document.querySelector("#leave-room-button").addEventListener("click", async () => {
   try {
     await emitAck(CLIENT_EVENTS.ROOM_LEAVE);

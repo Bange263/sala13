@@ -286,7 +286,8 @@ Then verify manually:
 - a public lobby appears on a second browser;
 - a private room is absent from the public list;
 - a wrong password is rejected;
-- two players can ready, start and finish Tic-Tac-Toe;
+- players cannot start until every connected participant is ready;
+- at least one visible-state, hidden-card and drawing game can be completed;
 - a third player cannot join a two-player room;
 - refreshing one player within 30 seconds restores the room;
 - closing both clients removes the lobby after the configured grace/TTL;

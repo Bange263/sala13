@@ -119,6 +119,24 @@ export class Room {
     this.touch();
   }
 
+  getStartEligibility() {
+    const connected = this.connectedPlayers;
+    const allowed = this.game.players.allowed;
+    const validPlayerCount = allowed
+      ? allowed.includes(connected.length)
+      : connected.length >= this.game.players.min && connected.length <= this.maxPlayers;
+    const disconnectedPlayerIds = [...this.players.values()]
+      .filter((player) => !player.connected)
+      .map((player) => player.id);
+    const notReadyPlayerIds = connected.filter((player) => !player.ready).map((player) => player.id);
+    return {
+      canStart: validPlayerCount && disconnectedPlayerIds.length === 0 && notReadyPlayerIds.length === 0,
+      validPlayerCount,
+      disconnectedPlayerIds,
+      notReadyPlayerIds
+    };
+  }
+
   start(playerId) {
     if (this.hostPlayerId !== playerId) {
       throw new PublicError(ERROR_CODES.NOT_HOST, "Solo l'host può avviare la partita.");
@@ -131,12 +149,8 @@ export class Room {
     }
 
     const connected = this.connectedPlayers;
-    const allowed = this.game.players.allowed;
-    const countIsValid = allowed
-      ? allowed.includes(connected.length)
-      : connected.length >= this.game.players.min && connected.length <= this.maxPlayers;
-
-    if (!countIsValid || connected.length !== this.players.size || connected.some((player) => !player.ready)) {
+    const eligibility = this.getStartEligibility();
+    if (!eligibility.canStart) {
       throw new PublicError(ERROR_CODES.NOT_READY, "Servono tutti i giocatori presenti e pronti.");
     }
 
@@ -194,6 +208,7 @@ export class Room {
     const self = this.players.get(playerId);
     if (!self) return null;
 
+    const { words: _secretWords, ...publicSettings } = this.settings;
     return {
       code: this.code,
       gameId: this.gameId,
@@ -204,7 +219,8 @@ export class Room {
       version: this.version,
       hostPlayerId: this.hostPlayerId,
       selfPlayerId: playerId,
-      settings: this.settings,
+      settings: publicSettings,
+      startEligibility: this.getStartEligibility(),
       players: [...this.players.values()].map((player) => ({
         id: player.id,
         name: player.name,

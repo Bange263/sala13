@@ -14,10 +14,17 @@ export const createRoomSchema = z.object({
   password,
   settings: z
     .object({
-      maxPlayers: z.number().int().min(2).max(20).optional(),
+      maxPlayers: z.number().int().min(2).max(40).optional(),
       variant: z.string().trim().max(32).optional(),
       mode: z.string().trim().max(32).optional(),
-      stacking: z.boolean().optional()
+      stacking: z.boolean().optional(),
+      categories: z.array(z.string().trim().min(2).max(60)).min(2).max(20).optional(),
+      words: z.array(z.string().trim().min(3).max(40)).max(100).optional(),
+      roundSeconds: z.number().int().min(30).max(600).optional(),
+      startingChips: z.number().int().min(200).max(1_000_000).optional(),
+      baseBet: z.number().int().min(10).max(500).optional(),
+      bigBlind: z.number().int().min(10).max(10_000).optional(),
+      dealerHitsSoft17: z.boolean().optional()
     })
     .optional()
     .default({})

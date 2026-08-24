@@ -3,23 +3,27 @@
 These plans define server state, accepted intent and hard validation. Browser UI
 details may change without changing these contracts.
 
-## Delivery matrix
+The delivery matrix records the v0.2 playable core. The longer sections also
+document optional/advanced target rules (for example insurance or tournament
+variants) and should not be read as a claim that every house rule is enabled.
 
-| Game id | Players | Hidden information | Main complexity | Starter status |
+## Delivery matrix (v0.2)
+
+| Game id | Players | Hidden information | Main complexity | Status |
 | --- | ---: | --- | --- | --- |
-| `blackjack` | 2–7 | deck, dealer hole card | split hands and bets | blueprint |
-| `uno` | 2–10 | deck and hands | action effects and house rules | blueprint |
-| `scopa` | 2 or 4 | deck and hands | legal capture sets and Primiera | blueprint |
-| `briscola` | 2 or 4 | deck and hands | trick order and teams | blueprint |
-| `texas-holdem` | 2–10 | deck and hole cards | betting/side pots/evaluator | blueprint |
-| `burraco` | 2–4 | deck, hands, pozzetti | meld validation and scoring | blueprint |
-| `battleship` | 2 | opponent fleet | placement and shot projection | blueprint |
-| `chess-checkers` | 2 | none | complete legal-move rules | blueprint |
+| `blackjack` | 2–12 | deck, dealer hole card | split hands and bets | playable core |
+| `uno` | 2–20 | deck and hands | action effects and house rules | playable core |
+| `scopa` | 2 or 4 | deck and hands | legal capture sets and Primiera | playable core |
+| `briscola` | 2 or 4 | deck and hands | trick order and teams | playable core |
+| `texas-holdem` | 2–12 | deck and hole cards | betting/side pots/evaluator | playable core |
+| `burraco` | 2–4 | deck, hands, pozzetti | meld validation and scoring | playable core |
+| `battleship` | 2 | opponent fleet | placement and shot projection | playable core |
+| `chess-checkers` | 2 | none | complete legal-move rules | playable core |
 | `tic-tac-toe` | 2 | none | small turn state | playable |
-| `categories` | 2–20 | answers until reveal | timer, voting and normalization | blueprint |
-| `hangman` | 2–12 | solution | normalized word matching | blueprint |
-| `connect-four` | 2 | none | gravity and four-line scan | blueprint |
-| `draw-and-pass` | 2–12 | prompts/chains | vector canvas and rotation | blueprint |
+| `categories` | 2–40 | answers until reveal | timer, voting and normalization | playable core |
+| `hangman` | 2–30 | solution | normalized word matching | playable core |
+| `connect-four` | 2 | none | gravity and four-line scan | playable core |
+| `draw-and-pass` | 2–24 | prompts/chains | vector canvas and rotation | playable core |
 
 ## Shared engine conventions
 
@@ -39,7 +43,7 @@ details may change without changing these contracts.
 
 ```ts
 type BlackjackSettings = {
-  maxPlayers: 2 | 3 | 4 | 5 | 6 | 7;
+  maxPlayers: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
   decks: 1 | 2 | 4 | 6 | 8;
   startingChips: number;
   minimumBet: number;

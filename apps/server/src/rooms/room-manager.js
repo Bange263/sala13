@@ -146,7 +146,14 @@ export class RoomManager extends EventEmitter {
       maxPlayers,
       ...(typeof settings.variant === "string" ? { variant: settings.variant.slice(0, 32) } : {}),
       ...(typeof settings.mode === "string" ? { mode: settings.mode.slice(0, 32) } : {}),
-      ...(typeof settings.stacking === "boolean" ? { stacking: settings.stacking } : {})
+      ...(typeof settings.stacking === "boolean" ? { stacking: settings.stacking } : {}),
+      ...(Array.isArray(settings.categories) ? { categories: settings.categories.slice(0, 20) } : {}),
+      ...(Array.isArray(settings.words) ? { words: settings.words.slice(0, 100) } : {}),
+      ...(Number.isInteger(settings.roundSeconds) ? { roundSeconds: settings.roundSeconds } : {}),
+      ...(Number.isInteger(settings.startingChips) ? { startingChips: settings.startingChips } : {}),
+      ...(Number.isInteger(settings.baseBet) ? { baseBet: settings.baseBet } : {}),
+      ...(Number.isInteger(settings.bigBlind) ? { bigBlind: settings.bigBlind } : {}),
+      ...(typeof settings.dealerHitsSoft17 === "boolean" ? { dealerHitsSoft17: settings.dealerHitsSoft17 } : {})
     };
   }
 
