@@ -1,13 +1,22 @@
 import { randomInt } from "node:crypto";
-import { DEFAULT_CATEGORIES } from "@sala13/shared";
+import { DEFAULT_CATEGORIES, ERROR_CODES } from "@sala13/shared";
 import { cloneState, invalid, nextPlayerId, normalizeText, requirePlayers, requireTurn } from "./game-utils.js";
+import { PublicError } from "../utils/public-error.js";
 
 const LETTERS = "ABCDEFGHILMNOPQRSTUVZ";
 const HANGMAN_WORDS = Object.freeze([
-  "astronauta", "biblioteca", "coccodrillo", "costellazione", "dinosauro", "elettricità",
-  "fotografia", "gelateria", "informatica", "labirinto", "montagna", "orchestra",
-  "pianoforte", "quadrifoglio", "semaforo", "temporale", "vulcano"
+  "aeroplano", "albero", "amicizia", "animale", "astronauta", "automobile", "bambino", "bastardo",
+  "biblioteca", "bicicletta", "biscotto", "cane", "canzone", "castello", "cavallo", "cazzo",
+  "cervello", "chiave", "cioccolato", "coccodrillo", "coglione", "computer", "coniglio", "costellazione",
+  "dinosauro", "drago", "elefante", "elettricita", "finestra", "fiore", "forchetta", "fotografia",
+  "fragola", "gatto", "gelateria", "giardino", "giornale", "inferno", "informatica", "labirinto",
+  "lampada", "libro", "maiale", "merda", "montagna", "motorino", "nuvola", "oceano",
+  "orchestra", "pallone", "panino", "paperino", "pianoforte", "pirata", "pizza", "porco",
+  "puttana", "quadrifoglio", "ragazza", "robot", "scimmia", "scuola", "semaforo", "serpente",
+  "sole", "stronzo", "tavolo", "temporale", "telefono", "tigre", "trattore", "uccello",
+  "valigia", "vulcano", "zaino", "zebra"
 ]);
+const HANGMAN_DICTIONARY = new Set(HANGMAN_WORDS.map(normalizeText));
 
 function randomLetter(previous = null) {
   const choices = [...LETTERS].filter((letter) => letter !== previous);
@@ -42,7 +51,13 @@ function scoreCategories(state) {
   for (const id of state.order) state.scores[id] += roundScores[id];
   state.roundScores = roundScores;
   state.validity = validity;
-  state.phase = "round-result";
+  if (state.round >= state.maxRounds) {
+    const best = Math.max(...Object.values(state.scores));
+    state.winnerIds = state.order.filter((id) => state.scores[id] === best);
+    state.phase = "finished";
+  } else {
+    state.phase = "round-result";
+  }
 }
 
 function resetCategoriesRound(state) {
@@ -68,6 +83,7 @@ export class CategoriesEngine {
       : [];
     const categories = selected.length >= 2 ? selected : DEFAULT_CATEGORIES.slice(0, 8);
     const roundSeconds = Math.max(30, Math.min(600, Number(settings.roundSeconds) || 120));
+    const maxRounds = Math.max(1, Math.min(20, Number(settings.maxRounds) || 5));
     return {
       kind: "categories",
       phase: "answering",
@@ -77,6 +93,7 @@ export class CategoriesEngine {
       letter: randomLetter(),
       categories,
       roundSeconds,
+      maxRounds,
       deadline: Date.now() + roundSeconds * 1_000,
       answers: Object.fromEntries(order.map((id) => [id, null])),
       submitted: [],
@@ -109,6 +126,15 @@ export class CategoriesEngine {
       openReview(next);
       return next;
     }
+    if (action.type === "skip-letter") {
+      if (playerId !== next.hostId || next.phase !== "answering") invalid("Solo l'host può cambiare la lettera durante le risposte.");
+      next.letter = randomLetter(next.letter);
+      next.answers = Object.fromEntries(next.order.map((id) => [id, null]));
+      next.submitted = [];
+      next.votes = {};
+      next.deadline = Date.now() + next.roundSeconds * 1_000;
+      return next;
+    }
     if (action.type === "vote") {
       if (next.phase !== "review" || !next.order.includes(action.targetPlayerId) || !next.categories.includes(action.category)) {
         invalid("Voto non valido.");
@@ -126,6 +152,7 @@ export class CategoriesEngine {
     }
     if (action.type === "next-round") {
       if (playerId !== next.hostId || next.phase !== "round-result") invalid("Il prossimo round non può ancora iniziare.");
+      if (next.round >= next.maxRounds) invalid("Hai già giocato il numero massimo di round.");
       resetCategoriesRound(next);
       return next;
     }
@@ -148,6 +175,7 @@ export class CategoriesEngine {
       order: state.order,
       hostId: state.hostId,
       round: state.round,
+      maxRounds: state.maxRounds,
       letter: state.letter,
       categories: state.categories,
       deadline: state.deadline,
@@ -164,6 +192,16 @@ export class CategoriesEngine {
   static isFinished(state) {
     return state.phase === "finished";
   }
+
+  static onTimeout({ state }) {
+    if (state.phase !== "answering") return state;
+    const next = cloneState(state);
+    for (const id of next.order) {
+      if (!next.answers[id]) next.answers[id] = Object.fromEntries(next.categories.map((category) => [category, ""]));
+    }
+    openReview(next);
+    return next;
+  }
 }
 
 function maskWord(solution, guessed) {
@@ -174,25 +212,40 @@ function maskWord(solution, guessed) {
 }
 
 function rotateHangman(state) {
-  state.currentPlayerId = nextPlayerId(state.order, state.currentPlayerId);
+  state.currentPlayerId = nextPlayerId(state.guessOrder, state.currentPlayerId);
 }
 
 export class HangmanEngine {
   static implemented = true;
 
+  static validateSettings(settings) {
+    if (settings.hangmanMode !== "custom") return;
+    const customWord = normalizeText(settings.customWord).replace(/[^a-z]/g, "");
+    if (customWord.length < 3 || customWord.length > 12 || !HANGMAN_DICTIONARY.has(customWord)) {
+      throw new PublicError(ERROR_CODES.BAD_REQUEST, "La parola personalizzata deve essere nel dizionario italiano di Sala13 e avere da 3 a 12 lettere.");
+    }
+  }
+
   static start({ players, settings }) {
     requirePlayers(players, { min: 2, max: 30 });
+    this.validateSettings(settings);
     const order = players.map((player) => player.id);
+    const mode = settings.hangmanMode === "custom" ? "custom" : "classic";
+    const setterId = mode === "custom" ? order[0] : null;
+    const guessOrder = mode === "custom" ? order.slice(1) : order;
     const customWords = Array.isArray(settings.words)
       ? settings.words.map((word) => String(word).trim()).filter((word) => word.length >= 3 && word.length <= 40)
       : [];
     const words = customWords.length > 0 ? customWords : HANGMAN_WORDS;
-    const solution = words[randomInt(0, words.length)];
+    const solution = mode === "custom" ? normalizeText(settings.customWord) : words[randomInt(0, words.length)];
     return {
       kind: "hangman",
       phase: "playing",
       order,
-      currentPlayerId: order[0],
+      guessOrder,
+      mode,
+      setterId,
+      currentPlayerId: guessOrder[0],
       solution,
       guessedLetters: [],
       wrongLetters: [],
@@ -243,14 +296,17 @@ export class HangmanEngine {
     return next;
   }
 
-  static view(state) {
+  static view(state, playerId) {
     return {
       kind: state.kind,
       phase: state.phase,
       order: state.order,
+      guessOrder: state.guessOrder,
+      mode: state.mode,
+      setterId: state.setterId,
       currentPlayerId: state.currentPlayerId,
       maskedWord: maskWord(state.solution, state.guessedLetters),
-      solution: state.phase === "finished" ? state.solution : null,
+      solution: state.phase === "finished" || playerId === state.setterId ? state.solution : null,
       guessedLetters: state.guessedLetters,
       wrongLetters: state.wrongLetters,
       attempts: state.attempts,

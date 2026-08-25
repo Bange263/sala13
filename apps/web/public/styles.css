@@ -497,6 +497,19 @@ select:focus-visible {
   letter-spacing: 0.15em;
 }
 
+.room-code-card small {
+  color: var(--green);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.room-code-card:hover,
+.room-code-card:focus-visible {
+  border-color: var(--green);
+  box-shadow: 0 8px 22px rgb(37 83 62 / 14%);
+  transform: translateY(-2px);
+}
+
 .room-layout {
   display: grid;
   grid-template-columns: 270px minmax(0, 1fr);
@@ -540,7 +553,7 @@ select:focus-visible {
 
 .player-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
   gap: 9px;
   align-items: center;
   padding: 9px 0;
@@ -566,18 +579,47 @@ select:focus-visible {
 }
 
 .player-state {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #aaa397;
+  min-height: 26px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e2dbcf;
+  color: #645f57;
+  font-size: 0.64rem;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .player-state[data-ready="true"] {
-  background: #4c8a66;
+  background: #dcebdd;
+  color: #2d6846;
 }
 
 .player-state[data-connected="false"] {
-  background: var(--danger);
+  background: #f4ded9;
+  color: var(--danger);
+}
+
+.player-kick-button {
+  min-height: 26px;
+  padding: 4px 7px;
+  border: 1px solid #d5aaa0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.player-kick-button:hover { background: #f7e4df; }
+
+.field-help {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .room-controls {

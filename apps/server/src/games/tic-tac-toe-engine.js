@@ -34,7 +34,8 @@ export class TicTacToeEngine {
       winnerId: null,
       winningLine: null,
       draw: false,
-      moveCount: 0
+      moveCount: 0,
+      lastMove: null
     };
   }
 
@@ -66,7 +67,8 @@ export class TicTacToeEngine {
       winnerId: line ? playerId : null,
       winningLine: line,
       draw,
-      moveCount
+      moveCount,
+      lastMove: { playerId, cell: action.cell }
     };
   }
 
@@ -79,5 +81,21 @@ export class TicTacToeEngine {
 
   static isFinished(state) {
     return Boolean(state.winnerId || state.draw);
+  }
+
+  static botAction({ playerId, state }) {
+    const free = state.board.map((value, index) => value === null ? index : -1).filter((index) => index >= 0);
+    const completes = (mark) => free.find((cell) => {
+      const board = [...state.board];
+      board[cell] = mark;
+      return Boolean(winningLine(board));
+    });
+    const opponentMark = Object.values(state.marks).find((mark) => mark !== state.marks[playerId]);
+    const cell = completes(state.marks[playerId])
+      ?? completes(opponentMark)
+      ?? (free.includes(4) ? 4 : undefined)
+      ?? [0, 2, 6, 8].find((index) => free.includes(index))
+      ?? free[0];
+    return Number.isInteger(cell) ? { type: "place", cell } : null;
   }
 }

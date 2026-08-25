@@ -148,6 +148,8 @@ Never branch client behavior on localized message text; use `error.code`.
 | `room:create` | player id/name, game id, visibility, optional password/settings | schema, known game, player bounds |
 | `room:join` | player id/name, code, optional password | room exists, password, capacity, status |
 | `room:leave` | none | socket membership |
+| `room:kick` | `{ playerId }` | host membership, target exists, target is not host |
+| `room:add-bot` | none | host, lobby capacity, engine bot support |
 | `room:ready` | `{ ready }` | membership and non-playing status |
 | `room:start` | none | host, valid count, all connected/ready, implemented engine |
 | `game:action` | `{ expectedVersion, action }` | membership, current version, game-specific action |

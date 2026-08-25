@@ -56,7 +56,7 @@ export function createApplication(config = defaultConfig) {
     response.json({
       ok: true,
       service: "sala13",
-      version: "0.3.2",
+      version: "0.4.0",
       uptimeSeconds: Math.floor(process.uptime()),
       rooms: roomManager.rooms.size,
       clients: io.engine.clientsCount

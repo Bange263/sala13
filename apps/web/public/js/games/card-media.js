@@ -103,15 +103,17 @@ function unoSource(card) {
   const symbol = ({ skip: "⊘", reverse: "↻", draw2: "+2", wild: "W", wild4: "+4" })[card.value] ?? card.value;
   const label = UNO_NAMES[card.value] ?? card.value;
   const wildMarks = card.color === "wild"
-    ? `<path d="M76 133a54 54 0 0 1 88 0l-44 47z" fill="#c94435"/><path d="M164 133a54 54 0 0 1 0 94l-44-47z" fill="#356c91"/><path d="M164 227a54 54 0 0 1-88 0l44-47z" fill="#d5a928"/><path d="M76 227a54 54 0 0 1 0-94l44 47z" fill="#2f7656"/>`
-    : `<text x="120" y="211" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="78" fill="${card.color === "yellow" ? "#252c28" : "#fffdf6"}">${symbol}</text>`;
+    ? `<path d="M71 128a61 61 0 0 1 98 0l-49 52z" fill="#d44938"/><path d="M169 128a61 61 0 0 1 0 104l-49-52z" fill="#3979aa"/><path d="M169 232a61 61 0 0 1-98 0l49-52z" fill="#e0b638"/><path d="M71 232a61 61 0 0 1 0-104l49 52z" fill="#33815a"/><text x="120" y="199" text-anchor="middle" font-family="Arial,sans-serif" font-weight="950" font-size="${card.value === "wild4" ? 48 : 34}" fill="#fff" stroke="#202722" stroke-width="3">${symbol}</text>`
+    : `<text x="120" y="211" text-anchor="middle" font-family="Arial,sans-serif" font-weight="950" font-size="82" fill="${color}" stroke="#fff" stroke-width="3">${symbol}</text>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 360">
-    <rect x="5" y="5" width="230" height="350" rx="24" fill="${color}" stroke="#fffaf0" stroke-width="10"/>
-    <ellipse cx="120" cy="180" rx="78" ry="124" fill="#fffaf0" opacity=".18" transform="rotate(25 120 180)"/>
+    <defs><filter id="s"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity=".28"/></filter></defs>
+    <rect x="4" y="4" width="232" height="352" rx="25" fill="#fffaf0" stroke="#202722" stroke-width="8"/>
+    <rect x="14" y="14" width="212" height="332" rx="17" fill="${color}"/>
+    <ellipse cx="120" cy="180" rx="79" ry="125" fill="#fffaf0" transform="rotate(25 120 180)" filter="url(#s)"/>
     ${wildMarks}
-    <text x="28" y="50" font-family="Arial,sans-serif" font-weight="900" font-size="30" fill="${card.color === "yellow" ? "#252c28" : "#fffdf6"}">${symbol}</text>
-    <text x="212" y="320" text-anchor="end" font-family="Arial,sans-serif" font-weight="900" font-size="30" fill="${card.color === "yellow" ? "#252c28" : "#fffdf6"}" transform="rotate(180 212 310)">${symbol}</text>
-    <text x="120" y="316" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="${card.color === "yellow" ? "#252c28" : "#fffdf6"}">${label.toUpperCase()}</text>
+    <circle cx="33" cy="39" r="22" fill="#fffaf0"/><text x="33" y="49" text-anchor="middle" font-family="Arial,sans-serif" font-weight="950" font-size="27" fill="${color}">${symbol}</text>
+    <circle cx="207" cy="321" r="22" fill="#fffaf0"/><text x="207" y="330" text-anchor="middle" font-family="Arial,sans-serif" font-weight="950" font-size="27" fill="${color}" transform="rotate(180 207 321)">${symbol}</text>
+    <rect x="62" y="294" width="116" height="28" rx="14" fill="${color}"/><text x="120" y="314" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="14" fill="#fffaf0">${label.toUpperCase()}</text>
   </svg>`;
   const source = svgData(svg);
   unoCache.set(cacheKey, source);

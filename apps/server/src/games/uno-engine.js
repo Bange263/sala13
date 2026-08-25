@@ -55,6 +55,35 @@ function validColor(value) {
   return COLORS.includes(value);
 }
 
+function resolvePlayedCard(state, playerId, card) {
+  const hand = state.hands[playerId];
+  if (hand.length === 0) {
+    state.winnerId = playerId;
+    state.phase = "finished";
+    state.currentPlayerId = null;
+    return;
+  }
+  if (card.value === "reverse") {
+    state.direction *= -1;
+    advance(state, state.order.length === 2 ? 2 : 1);
+  } else if (card.value === "skip") {
+    advance(state, 2);
+  } else if (card.value === "draw2" || card.value === "wild4") {
+    const amount = card.value === "draw2" ? 2 : 4;
+    if (state.stacking) {
+      state.pendingDraw += amount;
+      state.pendingType = card.value;
+      advance(state);
+    } else {
+      advance(state);
+      drawCards(state, state.currentPlayerId, amount);
+      advance(state);
+    }
+  } else {
+    advance(state);
+  }
+}
+
 export class UnoEngine {
   static implemented = true;
 
@@ -80,12 +109,26 @@ export class UnoEngine {
       hands,
       pendingDraw: 0,
       pendingType: null,
+      pendingWild: null,
       winnerId: null,
       stacking: Boolean(settings.stacking)
     };
   }
 
   static applyAction({ action, playerId, state }) {
+    if (state.phase === "choose-color") {
+      requireTurn(state, playerId);
+      if (action.type !== "choose-color" || !validColor(action.color) || state.pendingWild?.playerId !== playerId) {
+        invalid("Scegli uno dei quattro colori dopo aver giocato il Jolly.");
+      }
+      const next = cloneState(state);
+      const card = { value: next.pendingWild.cardValue, color: "wild" };
+      next.currentColor = action.color;
+      next.pendingWild = null;
+      next.phase = "playing";
+      resolvePlayedCard(next, playerId, card);
+      return next;
+    }
     if (state.phase !== "playing") invalid("La partita è terminata.");
     requireTurn(state, playerId);
     const next = cloneState(state);
@@ -118,40 +161,18 @@ export class UnoEngine {
     if (card.value === "wild4" && next.pendingDraw === 0 && hand.some((candidate) => candidate.id !== card.id && candidate.color === next.currentColor)) {
       invalid("Il +4 non è legale perché possiedi una carta del colore corrente.");
     }
-    if (card.color === "wild" && !validColor(action.color)) invalid("Scegli il nuovo colore.");
-
     hand.splice(cardIndex, 1);
     next.discardPile.push(card);
-    next.currentColor = card.color === "wild" ? action.color : card.color;
+    if (card.color !== "wild") next.currentColor = card.color;
 
     if (hand.length === 1 && action.uno !== true) drawCards(next, playerId, 2);
 
-    if (hand.length === 0) {
-      next.winnerId = playerId;
-      next.phase = "finished";
-      next.currentPlayerId = null;
+    if (card.color === "wild") {
+      next.phase = "choose-color";
+      next.pendingWild = { playerId, cardValue: card.value };
       return next;
     }
-
-    if (card.value === "reverse") {
-      next.direction *= -1;
-      advance(next, next.order.length === 2 ? 2 : 1);
-    } else if (card.value === "skip") {
-      advance(next, 2);
-    } else if (card.value === "draw2" || card.value === "wild4") {
-      const amount = card.value === "draw2" ? 2 : 4;
-      if (next.stacking) {
-        next.pendingDraw += amount;
-        next.pendingType = card.value;
-        advance(next);
-      } else {
-        advance(next);
-        drawCards(next, next.currentPlayerId, amount);
-        advance(next);
-      }
-    } else {
-      advance(next);
-    }
+    resolvePlayedCard(next, playerId, card);
     return next;
   }
 
@@ -167,6 +188,8 @@ export class UnoEngine {
       drawCount: state.drawPile.length,
       pendingDraw: state.pendingDraw,
       pendingType: state.pendingType,
+      awaitingColor: state.phase === "choose-color",
+      pendingWildPlayerId: state.pendingWild?.playerId ?? null,
       winnerId: state.winnerId,
       stacking: state.stacking,
       hands: Object.fromEntries(state.order.map((id) => [id, id === playerId ? state.hands[id] : { count: state.hands[id].length }]))
@@ -175,5 +198,21 @@ export class UnoEngine {
 
   static isFinished(state) {
     return state.phase === "finished";
+  }
+
+  static botAction({ playerId, state }) {
+    const hand = state.hands[playerId];
+    if (state.phase === "choose-color" && state.pendingWild?.playerId === playerId) {
+      const counts = Object.fromEntries(COLORS.map((color) => [color, hand.filter((card) => card.color === color).length]));
+      const color = [...COLORS].sort((left, right) => counts[right] - counts[left])[0];
+      return { type: "choose-color", color };
+    }
+    if (state.phase !== "playing" || state.currentPlayerId !== playerId) return null;
+    const card = hand.find((candidate) => {
+      if (state.pendingDraw > 0) return state.stacking && candidate.value === state.pendingType;
+      if (!playable(candidate, state)) return false;
+      return candidate.value !== "wild4" || !hand.some((other) => other.id !== candidate.id && other.color === state.currentColor);
+    });
+    return card ? { type: "play", cardId: card.id, uno: hand.length === 2 } : { type: "draw" };
   }
 }

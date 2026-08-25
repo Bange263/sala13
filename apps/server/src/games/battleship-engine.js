@@ -146,4 +146,18 @@ export class BattleshipEngine {
   static isFinished(state) {
     return state.phase === "finished";
   }
+
+  static botPlayerToAct({ players, state }) {
+    if (state.phase !== "placement") return null;
+    return state.order.find((id) => players.find((player) => player.id === id)?.isBot && !state.boards[id].ships) ?? null;
+  }
+
+  static botAction({ playerId, state }) {
+    if (state.phase === "placement" && !state.boards[playerId].ships) return { type: "auto-place" };
+    if (state.phase !== "battle" || state.currentPlayerId !== playerId) return null;
+    const available = Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, cell) => cell)
+      .filter((cell) => !Object.hasOwn(state.shots[playerId], cell));
+    const cell = available[randomInt(0, available.length)];
+    return Number.isInteger(cell) ? { type: "fire", cell } : null;
+  }
 }

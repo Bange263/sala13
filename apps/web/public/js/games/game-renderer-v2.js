@@ -5,6 +5,7 @@ import {
   control,
   countdown,
   el,
+  finalResultPanel,
   gameHeader,
   gameLayout,
   leaderboard,
@@ -52,6 +53,11 @@ function textInput(placeholder, maxLength = 80) {
   return input;
 }
 
+function keepDraft(input, key) {
+  input.dataset.draftKey = key;
+  return input;
+}
+
 function teamLabel(room, state, team) {
   const memberIds = state.teams?.[team] ?? [team];
   return memberIds.map((id) => playerName(room, id)).join(" + ");
@@ -79,6 +85,13 @@ function renderBlackjack(stage, room, send) {
   root.append(gameHeader("Blackjack", state.phase === "betting" ? "Scegli la puntata prima della distribuzione" : turnSubtitle(room, state), { eyebrow: "Casinò · banco contro tavolo", badge: phase }));
 
   const table = tableSurface("blackjack-felt");
+  const guide = el("section", "blackjack-guide-strip");
+  guide.append(
+    metric("Obiettivo", "21 senza sballare"),
+    metric("Puntata max", state.settings.maxBet === 9_999 ? "Saldo intero" : `${state.settings.maxBet} chip`),
+    metric("Banco", state.settings.dealerHitsSoft17 ? "Pesca soft 17" : "Sta su soft 17")
+  );
+  table.append(guide);
   const dealer = el("section", "dealer-rack");
   const dealerHeading = el("div", "zone-heading");
   dealerHeading.append(el("span", "zone-label", "Banco"), el("strong", "zone-score", state.dealer.value === null ? "Carta coperta" : `${state.dealer.value} punti`));
@@ -124,12 +137,13 @@ function renderBlackjack(stage, room, send) {
     const self = state.players[room.selfPlayerId];
     if (self.hands.length === 0) {
       const panel = el("section", "betting-console");
-      let amountValue = Math.min(self.chips, state.settings.baseBet);
-      const amount = numberInput({ min: 10, max: self.chips, step: 10, value: amountValue });
+      const tableMaximum = state.settings.maxBet === 9_999 ? self.chips : Math.min(self.chips, state.settings.maxBet);
+      let amountValue = Math.min(tableMaximum, state.settings.baseBet);
+      const amount = keepDraft(numberInput({ min: 10, max: tableMaximum, step: 10, value: amountValue }), "blackjack-bet");
       const total = el("strong", "bet-total", `${amountValue} chip`);
       const preview = el("div", "bet-preview");
       const refresh = () => {
-        amountValue = Math.max(10, Math.min(self.chips, Number(amount.value) || 10));
+        amountValue = Math.max(10, Math.min(tableMaximum, Number(amount.value) || 10));
         amount.value = String(amountValue);
         total.textContent = `${amountValue} chip`;
         preview.replaceChildren(chipStack(amountValue));
@@ -138,13 +152,14 @@ function renderBlackjack(stage, room, send) {
       for (const value of [10, 25, 50, 100, 500]) {
         if (value > self.chips) continue;
         chipTray.append(chipElement(value, { interactive: true, onClick: () => {
-          amount.value = String(Math.min(self.chips, Number(amount.value) + value));
+          amount.value = String(Math.min(tableMaximum, Number(amount.value) + value));
           refresh();
         } }));
       }
       amount.addEventListener("input", refresh);
       panel.append(
-        el("div", "bet-console-copy", "Scegli quante chip mettere sul tavolo"),
+        el("div", "bet-console-copy", "Quanto vuoi puntare contro il banco?"),
+        statusBanner("Limite del tavolo", state.settings.maxBet === 9_999 ? `Nessun limite: puoi usare fino alle tue ${self.chips} chip.` : `Massimo ${state.settings.maxBet} chip per mano.`, "warning"),
         chipTray,
         el("label", "bet-input-label", "Importo esatto"),
         amount,
@@ -169,10 +184,10 @@ function renderBlackjack(stage, room, send) {
     actions.append(
       el("p", "decision-question", `Hai ${hand.value}. Come vuoi giocare?`),
       actionBar(
-        control("Carta", () => send({ type: "hit" }), "button button-primary"),
-        control("Resta", () => send({ type: "stand" }), "button button-dark"),
-        control("Raddoppia", () => send({ type: "double" }), "button button-quiet", hand.cards.length !== 2 || self.chips < hand.bet),
-        control("Dividi", () => send({ type: "split" }), "button button-quiet", hand.cards.length !== 2 || hand.cards[0].rank !== hand.cards[1].rank || self.chips < hand.bet)
+        control("PESCA · una carta", () => send({ type: "hit" }), "button button-primary"),
+        control("FERMATI · resta", () => send({ type: "stand" }), "button button-dark"),
+        control("RADDOPPIA · una carta e stop", () => send({ type: "double" }), "button button-quiet", hand.cards.length !== 2 || self.chips < hand.bet),
+        control("DIVIDI · crea due mani", () => send({ type: "split" }), "button button-quiet", hand.cards.length !== 2 || hand.cards[0].rank !== hand.cards[1].rank || self.chips < hand.bet)
       )
     );
     table.append(actions);
@@ -191,7 +206,7 @@ function renderBlackjack(stage, room, send) {
       active: player.id === state.currentPlayerId,
       state: record.hands.some((hand) => hand.result === "win" || hand.result === "blackjack") ? "winner" : ""
     };
-  }), { title: "Chip al tavolo", subtitle: `Mazzo: ${state.deckCount} carte` });
+  }), { title: "Classifica chip", subtitle: `Mazzo: ${state.deckCount} carte · più chip = prima posizione` });
   root.append(gameLayout(table, ranking));
   finish(stage, root);
 }
@@ -215,21 +230,6 @@ function renderUno(stage, room, send) {
 
   const ownHand = state.hands[room.selfPlayerId];
   if (Array.isArray(ownHand)) {
-    let selectedColor = "red";
-    const colorPicker = el("div", "uno-color-picker");
-    for (const value of ["red", "yellow", "green", "blue"]) {
-      const button = el("button", "uno-color-choice");
-      button.type = "button";
-      button.dataset.color = value;
-      button.dataset.selected = String(value === selectedColor);
-      button.title = `Scegli ${value}`;
-      button.setAttribute("aria-label", `Scegli ${value}`);
-      button.addEventListener("click", () => {
-        selectedColor = value;
-        [...colorPicker.children].forEach((candidate) => { candidate.dataset.selected = String(candidate === button); });
-      });
-      colorPicker.append(button);
-    }
     const unoCall = el("input");
     unoCall.type = "checkbox";
     unoCall.id = "uno-call-toggle";
@@ -243,16 +243,30 @@ function renderUno(stage, room, send) {
       fan: true,
       size: "normal",
       label: "La tua mano Uno",
-      onClick: (card) => send({ type: "play", cardId: card.id, color: selectedColor, uno: unoCall.checked })
+      onClick: state.phase === "playing" && state.currentPlayerId === room.selfPlayerId
+        ? (card) => send({ type: "play", cardId: card.id, uno: unoCall.checked })
+        : null
     }));
     handArea.append(actionBar(
-      colorPicker,
       unoToggle,
-      control(state.pendingDraw ? `Pesca ${state.pendingDraw} carte` : "Pesca una carta", () => send({ type: "draw" }), "button button-dark", state.currentPlayerId !== room.selfPlayerId)
+      control(state.pendingDraw ? `Pesca ${state.pendingDraw} carte` : "Pesca una carta", () => send({ type: "draw" }), "button button-dark", state.phase !== "playing" || state.currentPlayerId !== room.selfPlayerId)
     ));
     table.append(handArea);
   }
-  if (state.currentPlayerId !== room.selfPlayerId && !state.winnerId) table.append(statusBanner(`Attendi ${playerName(room, state.currentPlayerId)}`, "Puoi preparare la carta da giocare, ma il server accetta solo il turno corretto."));
+  if (state.awaitingColor && state.pendingWildPlayerId === room.selfPlayerId) {
+    const chooser = el("section", "uno-live-color-choice");
+    chooser.append(el("strong", "", "Hai giocato un Jolly: scegli adesso il nuovo colore"));
+    const colors = el("div", "uno-color-picker");
+    for (const [value, label] of [["red", "Rosso"], ["yellow", "Giallo"], ["green", "Verde"], ["blue", "Blu"]]) {
+      const choice = control(label, () => send({ type: "choose-color", color: value }), "uno-color-choice-large");
+      choice.dataset.color = value;
+      colors.append(choice);
+    }
+    chooser.append(colors);
+    table.append(chooser);
+  } else if (state.currentPlayerId !== room.selfPlayerId && !state.winnerId) {
+    table.append(statusBanner(`Attendi ${playerName(room, state.currentPlayerId)}`, state.awaitingColor ? "Sta scegliendo il colore del Jolly." : "Il server accetta carte soltanto dal giocatore di turno."));
+  }
 
   const ranking = leaderboard(room, room.players.map((player) => {
     const hand = state.hands[player.id];
@@ -384,7 +398,7 @@ function renderPoker(stage, room, send) {
     const toCall = Math.max(0, state.currentBet - self.streetBet);
     const minimum = Math.min(self.streetBet + self.chips, state.currentBet + state.minRaise);
     const maximum = self.streetBet + self.chips;
-    const amount = numberInput({ min: Math.max(0, minimum), max: maximum, step: state.bigBlind, value: Math.max(0, minimum) });
+    const amount = keepDraft(numberInput({ min: Math.max(0, minimum), max: maximum, step: state.bigBlind, value: Math.max(0, minimum) }), `poker-bet-${state.phase}`);
     const console = el("section", "poker-action-console");
     console.append(
       statusBanner(toCall > 0 ? `Per restare devi vedere ${toCall}` : "Puoi fare check", `Puntata corrente: ${state.currentBet} · rilancio minimo: ${state.currentBet + state.minRaise}`),
@@ -582,6 +596,20 @@ function renderChessCheckers(stage, room, send) {
   let selected = null;
   const order = state.yourColor === "b" ? Array.from({ length: 64 }, (_, index) => 63 - index) : Array.from({ length: 64 }, (_, index) => index);
   const buttons = new Map();
+  const legalByFrom = new Map();
+  for (const move of state.legalMoves ?? []) {
+    const targets = legalByFrom.get(move.from) ?? [];
+    targets.push(move.to);
+    legalByFrom.set(move.from, targets);
+  }
+  const showTargets = (from) => {
+    for (const [index, button] of buttons) {
+      button.classList.toggle("selected", index === from);
+      button.classList.toggle("legal-target", legalByFrom.get(from)?.includes(index) ?? false);
+      button.dataset.captureTarget = String(Boolean(state.board[index]) && (legalByFrom.get(from)?.includes(index) ?? false));
+    }
+    board.dataset.selecting = "true";
+  };
   for (const index of order) {
     const row = Math.floor(index / 8);
     const column = index % 8;
@@ -590,6 +618,7 @@ function renderChessCheckers(stage, room, send) {
     square.type = "button";
     square.dataset.dark = String((row + column) % 2 === 1);
     square.dataset.color = piece?.[0] ?? "";
+    square.dataset.lastMove = String(state.lastMove?.from === index || state.lastMove?.to === index);
     square.title = `${String.fromCharCode(97 + column)}${8 - row}`;
     square.disabled = Boolean(state.result) || state.currentPlayerId !== room.selfPlayerId;
     const coordinate = el("span", "square-coordinate", square.title);
@@ -605,16 +634,15 @@ function renderChessCheckers(stage, room, send) {
       if (selected === null) {
         if (piece?.[0] !== state.yourColor) return;
         selected = index;
-        square.classList.add("selected");
-        board.dataset.selecting = "true";
+        showTargets(selected);
         return;
       }
       if (piece?.[0] === state.yourColor) {
-        buttons.get(selected)?.classList.remove("selected");
         selected = index;
-        square.classList.add("selected");
+        showTargets(selected);
         return;
       }
+      if (!(legalByFrom.get(selected)?.includes(index) ?? false)) return;
       send({ type: "move", from: selected, to: index, promotion: "Q" });
     });
     buttons.set(index, square);
@@ -623,7 +651,7 @@ function renderChessCheckers(stage, room, send) {
   table.append(board);
   if (!state.result) table.append(statusBanner(state.currentPlayerId === room.selfPlayerId ? "Seleziona un pezzo, poi la destinazione" : `Attendi la mossa di ${playerName(room, state.currentPlayerId)}`, checkers ? "Le prese obbligatorie e i salti multipli vengono controllati dal server." : "Scacco, arrocco, en passant e promozione vengono controllati dal server."));
   const colorNames = ["Bianchi", "Neri"];
-  const rows = state.order.map((id, index) => ({ id, value: 0, valueLabel: colorNames[index], detail: id === room.selfPlayerId ? "Tu" : "Avversario", active: id === state.currentPlayerId, state: state.result && state.result.includes(index === 0 ? "white" : "black") ? "winner" : "" }));
+  const rows = state.order.map((id, index) => ({ id, value: room.matchScores?.[id] ?? 0, valueLabel: colorNames[index], detail: id === room.selfPlayerId ? "Tu" : "Avversario", active: id === state.currentPlayerId, state: id === state.winnerId ? "winner" : "" }));
   root.append(gameLayout(table, leaderboard(room, rows, { title: "Giocatori", subtitle: checkers ? "Pedine chiare e scure" : "Bianchi e neri", sort: false })));
   finish(stage, root);
 }
@@ -640,12 +668,13 @@ function renderTicTacToe(stage, room, send) {
     button.type = "button";
     button.disabled = Boolean(value) || state.currentPlayerId !== room.selfPlayerId || Boolean(state.winnerId || state.draw);
     button.dataset.winning = String(state.winningLine?.includes(cell) ?? false);
+    button.dataset.lastMove = String(state.lastMove?.cell === cell);
     button.setAttribute("aria-label", value ? `Casella ${cell + 1}: ${value}` : `Casella ${cell + 1}: vuota`);
     button.addEventListener("click", () => send({ type: "place", cell }));
     board.append(button);
   });
   table.append(board, statusBanner(state.winnerId ? (state.winnerId === room.selfPlayerId ? "Hai vinto" : "Partita persa") : state.draw ? "Pareggio" : state.currentPlayerId === room.selfPlayerId ? "Tocca a te" : "Attendi l'avversario", state.winnerId || state.draw ? "La linea vincente resta evidenziata." : "Scegli una casella libera.", state.winnerId === room.selfPlayerId ? "success" : "neutral"));
-  const rows = room.players.map((player) => ({ id: player.id, value: 0, valueLabel: state.marks[player.id], detail: player.id === room.selfPlayerId ? "Tu" : "Avversario", active: player.id === state.currentPlayerId, state: player.id === state.winnerId ? "winner" : "" }));
+  const rows = room.players.map((player) => ({ id: player.id, value: room.matchScores?.[player.id] ?? 0, valueLabel: `${state.marks[player.id]} · ${room.matchScores?.[player.id] ?? 0} pt`, detail: player.id === room.selfPlayerId ? "Tu" : player.isBot ? "Intelligenza artificiale" : "Avversario", active: player.id === state.currentPlayerId, state: player.id === state.winnerId ? "winner" : "" }));
   root.append(gameLayout(table, leaderboard(room, rows, { title: "Tabellone", subtitle: "X inizia la partita", sort: false })));
   finish(stage, root);
 }
@@ -653,11 +682,14 @@ function renderTicTacToe(stage, room, send) {
 function renderCategories(stage, room, send) {
   const state = room.gameState;
   const root = rootFor("categories-v2");
-  root.append(gameHeader("Nomi, Cose, Città", `Round ${state.round} · ${phaseName(state.phase)}`, { eyebrow: "Parole e votazione condivisa", badge: `Lettera ${state.letter}` }));
+  root.append(gameHeader("Nomi, Cose, Città", `Round ${state.round} di ${state.maxRounds} · ${phaseName(state.phase)}`, { eyebrow: "Parole e votazione condivisa", badge: `Lettera ${state.letter}` }));
   const table = tableSurface("categories-table-v2");
   const letterPanel = el("section", "letter-panel");
   letterPanel.append(el("strong", "spinner-letter", state.letter), el("div", "letter-copy", "Ogni risposta deve iniziare con questa lettera"));
-  if (state.phase === "answering") letterPanel.append(countdown(state.deadline));
+  if (state.phase === "answering") {
+    letterPanel.append(countdown(state.deadline));
+    if (room.selfPlayerId === state.hostId) letterPanel.append(control("Salta lettera", () => send({ type: "skip-letter" }), "skip-letter-button"));
+  }
   table.append(letterPanel);
   if (state.phase === "answering") {
     const form = el("form", "category-sheet");
@@ -666,6 +698,7 @@ function renderCategories(stage, room, send) {
       const label = el("label", "category-field");
       label.append(el("span", "", category));
       const input = textInput(`${state.letter}…`, 80);
+      keepDraft(input, `categories-${state.round}-${state.letter}-${category}`);
       input.disabled = state.submitted.includes(room.selfPlayerId);
       inputs[category] = input;
       label.append(input);
@@ -696,9 +729,14 @@ function renderCategories(stage, room, send) {
     }
     table.append(review);
     if (room.selfPlayerId === state.hostId && state.phase === "review") table.append(actionBar(control("Calcola il round", () => send({ type: "score-round" }), "button button-primary"), control("Termina partita", () => send({ type: "finish-game" }), "button button-quiet")));
+    if (state.phase === "round-result") {
+      const bestRound = Math.max(...Object.values(state.roundScores ?? {}));
+      const roundWinners = state.order.filter((id) => state.roundScores?.[id] === bestRound).map((id) => playerName(room, id)).join(" e ");
+      table.prepend?.(statusBanner(`${roundWinners} ${roundWinners.includes(" e ") ? "vincono" : "ha vinto"} il round`, `Punteggio migliore: ${bestRound} punti.`, "success"));
+    }
     if (room.selfPlayerId === state.hostId && state.phase === "round-result") table.append(actionBar(control("Prossimo round", () => send({ type: "next-round" }), "button button-primary"), control("Termina partita", () => send({ type: "finish-game" }), "button button-quiet")));
   }
-  const ranking = leaderboard(room, room.players.map((player) => ({ id: player.id, value: state.scores[player.id], valueLabel: `${state.scores[player.id]} pt`, detail: state.roundScores ? `${state.roundScores[player.id] >= 0 ? "+" : ""}${state.roundScores[player.id]} nel round` : state.submitted.includes(player.id) ? "Consegnato" : "Sta scrivendo", state: state.winnerIds?.includes(player.id) ? "winner" : "" })), { title: "Classifica", subtitle: `Round ${state.round}` });
+  const ranking = leaderboard(room, room.players.map((player) => ({ id: player.id, value: state.scores[player.id], valueLabel: `${state.scores[player.id]} pt`, detail: state.roundScores ? `${state.roundScores[player.id] >= 0 ? "+" : ""}${state.roundScores[player.id]} nel round` : state.submitted.includes(player.id) ? "Consegnato" : "Sta scrivendo", state: state.winnerIds?.includes(player.id) ? "winner" : "" })), { title: "Classifica in tempo reale", subtitle: `Round ${state.round}/${state.maxRounds} · 10 unica · 5 doppia · 0 non valida` });
   root.append(gameLayout(table, ranking));
   finish(stage, root);
 }
@@ -731,7 +769,8 @@ function hangmanDrawing(errors) {
 function renderHangman(stage, room, send) {
   const state = room.gameState;
   const root = rootFor("hangman-v2");
-  root.append(gameHeader("L'Impiccato", state.phase === "finished" ? (state.teamWon ? "La parola è stata indovinata" : "Tentativi terminati") : turnSubtitle(room, state), { eyebrow: "Parola condivisa · turni alternati", badge: `${state.errors}/${state.maxErrors} errori` }));
+  const modeLabel = state.mode === "custom" ? `Personalizzata · parola scelta da ${playerName(room, state.setterId)}` : "Classica · parola casuale";
+  root.append(gameHeader("L'Impiccato", state.phase === "finished" ? (state.teamWon ? "La parola è stata indovinata" : "Tentativi terminati") : state.setterId === room.selfPlayerId ? "Sei il paroliere: osserva i tentativi" : turnSubtitle(room, state), { eyebrow: modeLabel, badge: `${state.errors}/${state.maxErrors} errori` }));
   const table = tableSurface("hangman-table-v2");
   const puzzle = el("section", "hangman-puzzle");
   puzzle.append(hangmanDrawing(state.errors), el("div", "masked-word-v2", state.maskedWord));
@@ -747,7 +786,7 @@ function renderHangman(stage, room, send) {
     const keyboard = el("div", "letter-keyboard");
     const used = new Set([...state.guessedLetters, ...state.wrongLetters]);
     for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") keyboard.append(control(letter, () => send({ type: "guess-letter", letter }), "letter-key", used.has(letter.toLowerCase())));
-    const word = textInput("Prova la parola completa", 40);
+    const word = keepDraft(textInput("Prova la parola completa", 12), "hangman-word");
     const form = el("form", "word-guess-form");
     form.addEventListener("submit", (event) => { event.preventDefault(); send({ type: "guess-word", word: word.value }); });
     form.append(word, control("Prova parola", () => form.requestSubmit(), "button button-primary"));
@@ -760,8 +799,8 @@ function renderHangman(stage, room, send) {
     state.attempts.slice(-6).reverse().forEach((attempt) => history.append(el("p", "", `${playerName(room, attempt.playerId)}: ${attempt.word}`)));
     table.append(history);
   }
-  const rows = state.order.map((id, index) => ({ id, value: 0, valueLabel: String(index + 1).padStart(2, "0"), detail: id === state.winnerId ? "Ha indovinato" : id === state.currentPlayerId ? "Sta giocando" : "In attesa", active: id === state.currentPlayerId, state: id === state.winnerId ? "winner" : "" }));
-  root.append(gameLayout(table, leaderboard(room, rows, { title: "Ordine dei turni", subtitle: `${state.guessedLetters.length} lettere trovate`, sort: false })));
+  const rows = state.order.map((id, index) => ({ id, value: room.matchScores?.[id] ?? 0, valueLabel: `${room.matchScores?.[id] ?? 0} pt`, detail: id === state.setterId ? "Paroliere" : id === state.winnerId ? "Ha indovinato" : id === state.currentPlayerId ? "Sta giocando" : `Turno ${index + 1}`, active: id === state.currentPlayerId, state: id === state.winnerId ? "winner" : "" }));
+  root.append(gameLayout(table, leaderboard(room, rows, { title: "Classifica", subtitle: `${state.guessedLetters.length} lettere trovate`, sort: true })));
   finish(stage, root);
 }
 
@@ -779,13 +818,20 @@ function renderConnectFour(stage, room, send) {
     const slot = el("span", "connect-slot-v2");
     slot.dataset.mark = mark ?? "";
     slot.dataset.winning = String(state.winningLine?.includes(index) ?? false);
+    slot.dataset.lastDrop = String(state.lastDrop?.row * state.columns + state.lastDrop?.column === index);
+    if (slot.dataset.lastDrop === "true") slot.style.setProperty("--drop-distance", `-${(state.lastDrop.row + 1) * 95}px`);
     slot.append(el("span", "connect-disc"));
     board.append(slot);
   });
   boardShell.append(dropRow, board);
-  table.append(boardShell, statusBanner(state.currentPlayerId === room.selfPlayerId ? "Scegli una colonna" : `Attendi ${playerName(room, state.currentPlayerId)}`, "I gettoni cadono sempre nella prima posizione libera."));
-  const rows = state.order.map((id, index) => ({ id, value: 0, valueLabel: index === 0 ? "Rosso" : "Ocra", detail: id === room.selfPlayerId ? "Tu" : "Avversario", active: id === state.currentPlayerId, state: id === state.winnerId ? "winner" : "" }));
-  root.append(gameLayout(table, leaderboard(room, rows, { title: "Giocatori", subtitle: "Primo a quattro", sort: false })));
+  const connectStatus = state.winnerId
+    ? statusBanner(`${playerName(room, state.winnerId)} ha vinto`, "Quattro gettoni sono allineati.", "success")
+    : state.draw
+      ? statusBanner("Pareggio", "La griglia è piena.", "warning")
+      : statusBanner(state.currentPlayerId === room.selfPlayerId ? "Scegli una colonna" : `Attendi ${playerName(room, state.currentPlayerId)}`, "I gettoni cadono sempre nella prima posizione libera.");
+  table.append(boardShell, connectStatus);
+  const rows = state.order.map((id, index) => ({ id, value: room.matchScores?.[id] ?? 0, valueLabel: `${room.matchScores?.[id] ?? 0} pt`, detail: `${index === 0 ? "Rosso" : "Ocra"}${id === room.selfPlayerId ? " · Tu" : ""}`, active: id === state.currentPlayerId, state: id === state.winnerId ? "winner" : "" }));
+  root.append(gameLayout(table, leaderboard(room, rows, { title: "Classifica", subtitle: "Una vittoria vale 1 punto", sort: true })));
   finish(stage, root);
 }
 
@@ -899,7 +945,7 @@ function renderDrawAndPass(stage, room, send) {
     if (state.phase === "drawing") prompt.append(countdown(state.deadline));
     table.append(prompt, canvasTool(state.strokes, room.selfPlayerId === state.drawerId && state.phase === "drawing", send));
     if (room.selfPlayerId !== state.drawerId && state.phase === "drawing") {
-      const guess = textInput("Scrivi cosa rappresenta il disegno", 80);
+      const guess = keepDraft(textInput("Scrivi cosa rappresenta il disegno", 80), `drawing-guess-${state.round}`);
       const form = el("form", "drawing-guess-form");
       form.addEventListener("submit", (event) => { event.preventDefault(); if (guess.value.trim()) { send({ type: "guess", text: guess.value }); guess.value = ""; } });
       form.append(guess, control("Invia risposta", () => form.requestSubmit(), "button button-primary"));
@@ -918,13 +964,21 @@ function renderDrawAndPass(stage, room, send) {
     table.append(messages);
     if (room.selfPlayerId === state.drawerId && state.phase === "drawing") table.append(control("Chiudi il round", () => send({ type: "end-round" }), "button button-quiet"));
     if (room.selfPlayerId === state.hostId && state.phase === "round-result") table.append(actionBar(control("Prossimo round", () => send({ type: "next-round" }), "button button-primary"), control("Termina partita", () => send({ type: "finish-game" }), "button button-quiet")));
+    if (state.phase === "round-result") {
+      table.prepend?.(statusBanner(state.winnerId ? `${playerName(room, state.winnerId)} ha vinto il round` : "Round terminato: tempo scaduto", state.winnerId ? "Risposta corretta: classifica aggiornata." : "Nessun giocatore ha indovinato in tempo.", state.winnerId ? "success" : "warning"));
+    }
     const ranking = leaderboard(room, room.players.map((player) => ({ id: player.id, value: state.scores[player.id], valueLabel: `${state.scores[player.id]} pt`, detail: player.id === state.drawerId ? "Disegnatore" : player.id === state.winnerId ? "Ha indovinato" : "Giocatore", active: player.id === state.drawerId, state: state.winnerIds?.includes(player.id) || player.id === state.winnerId ? "winner" : "" })), { title: "Classifica", subtitle: "100 risposta · 50 disegnatore" });
     root.append(gameLayout(table, ranking));
   } else {
     root.append(gameHeader("Passa il prompt", state.phase === "reveal" ? "Le catene sono complete" : `Fase ${phaseName(state.phase)}`, { eyebrow: "Telefono senza fili", badge: `Passaggio ${state.step + 1}` }));
     const table = tableSurface("pass-table-v2");
+    if (!["reveal", "finished"].includes(state.phase) && state.deadline) {
+      const timedPhase = statusBanner("Tempo della fase", state.phase === "drawing" ? `Hai ${state.drawingSeconds} secondi per disegnare.` : `Hai ${state.promptSeconds} secondi per scrivere.`, "warning");
+      timedPhase.append(countdown(state.deadline));
+      table.append(timedPhase);
+    }
     if (state.phase === "prompt") {
-      const input = textInput("Scrivi qualcosa di divertente da disegnare", 100);
+      const input = keepDraft(textInput("Scrivi qualcosa di divertente da disegnare", 100), "pass-prompt-0");
       const form = el("form", "prompt-submit-form");
       form.addEventListener("submit", (event) => { event.preventDefault(); send({ type: "submit-prompt", text: input.value }); });
       form.append(statusBanner("Crea il primo prompt", "Gli altri giocatori non lo vedranno direttamente."), input, control("Consegna prompt", () => form.requestSubmit(), "button button-primary", state.submitted.includes(room.selfPlayerId)));
@@ -932,7 +986,7 @@ function renderDrawAndPass(stage, room, send) {
     } else if (state.phase === "drawing" && state.assignment) {
       table.append(statusBanner("Disegna questo prompt", state.assignment.source?.content ?? "Prompt", "warning"), canvasTool(state.assignment.draftStrokes, !state.submitted.includes(room.selfPlayerId), send), control("Consegna disegno", () => send({ type: "submit-drawing" }), "button button-primary", state.submitted.includes(room.selfPlayerId)));
     } else if (state.phase === "caption" && state.assignment) {
-      const input = textInput("Cosa rappresenta questo disegno?", 100);
+      const input = keepDraft(textInput("Cosa rappresenta questo disegno?", 100), `pass-caption-${state.step}`);
       const form = el("form", "prompt-submit-form");
       form.addEventListener("submit", (event) => { event.preventDefault(); send({ type: "submit-caption", text: input.value }); });
       form.append(statusBanner("Descrivi senza vedere il prompt originale", "La tua frase verrà passata al prossimo giocatore."), canvasTool(state.assignment.source?.strokes ?? [], false, send), input, control("Consegna descrizione", () => form.requestSubmit(), "button button-primary", state.submitted.includes(room.selfPlayerId)));
@@ -961,20 +1015,29 @@ function renderDrawAndPass(stage, room, send) {
 }
 
 export function renderGame(stage, room, send) {
+  let renderer;
   switch (room.gameId) {
-    case "blackjack": return renderBlackjack(stage, room, send);
-    case "uno": return renderUno(stage, room, send);
-    case "scopa": return renderScopa(stage, room, send);
-    case "briscola": return renderBriscola(stage, room, send);
-    case "texas-holdem": return renderPoker(stage, room, send);
-    case "burraco": return renderBurraco(stage, room, send);
-    case "battleship": return renderBattleship(stage, room, send);
-    case "chess-checkers": return renderChessCheckers(stage, room, send);
-    case "tic-tac-toe": return renderTicTacToe(stage, room, send);
-    case "categories": return renderCategories(stage, room, send);
-    case "hangman": return renderHangman(stage, room, send);
-    case "connect-four": return renderConnectFour(stage, room, send);
-    case "draw-and-pass": return renderDrawAndPass(stage, room, send);
+    case "blackjack": renderer = renderBlackjack; break;
+    case "uno": renderer = renderUno; break;
+    case "scopa": renderer = renderScopa; break;
+    case "briscola": renderer = renderBriscola; break;
+    case "texas-holdem": renderer = renderPoker; break;
+    case "burraco": renderer = renderBurraco; break;
+    case "battleship": renderer = renderBattleship; break;
+    case "chess-checkers": renderer = renderChessCheckers; break;
+    case "tic-tac-toe": renderer = renderTicTacToe; break;
+    case "categories": renderer = renderCategories; break;
+    case "hangman": renderer = renderHangman; break;
+    case "connect-four": renderer = renderConnectFour; break;
+    case "draw-and-pass": renderer = renderDrawAndPass; break;
     default: return undefined;
   }
+  renderer(stage, room, send);
+  const result = room.status === "finished" ? finalResultPanel(room) : null;
+  const root = stage.firstElementChild ?? stage.children?.[0];
+  if (result && root) {
+    if (typeof root.insertBefore === "function") root.insertBefore(result, root.children[1] ?? null);
+    else root.append(result);
+  }
+  return undefined;
 }

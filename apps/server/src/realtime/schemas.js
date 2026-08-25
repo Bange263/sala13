@@ -21,13 +21,22 @@ export const createRoomSchema = z.object({
       categories: z.array(z.string().trim().min(2).max(60)).min(2).max(20).optional(),
       words: z.array(z.string().trim().min(3).max(40)).max(100).optional(),
       roundSeconds: z.number().int().min(30).max(600).optional(),
+      promptSeconds: z.number().int().min(30).max(300).optional(),
+      maxRounds: z.number().int().min(1).max(20).optional(),
       startingChips: z.number().int().min(200).max(1_000_000).optional(),
       baseBet: z.number().int().min(10).max(500).optional(),
+      maxBet: z.number().int().min(10).max(9999).optional(),
       bigBlind: z.number().int().min(10).max(10_000).optional(),
+      hangmanMode: z.enum(["classic", "custom"]).optional(),
+      customWord: z.string().trim().min(3).max(12).optional(),
       dealerHitsSoft17: z.boolean().optional()
     })
     .optional()
     .default({})
+}).superRefine((value, context) => {
+  if (value.visibility === ROOM_VISIBILITY.PRIVATE && value.password.trim().length < 3) {
+    context.addIssue({ code: "custom", path: ["password"], message: "Una stanza privata richiede una password di almeno 3 caratteri." });
+  }
 });
 
 export const joinRoomSchema = z.object({
@@ -38,6 +47,8 @@ export const joinRoomSchema = z.object({
 });
 
 export const readySchema = z.object({ ready: z.boolean() });
+
+export const kickSchema = z.object({ playerId });
 
 export const gameActionSchema = z.object({
   expectedVersion: z.number().int().nonnegative(),

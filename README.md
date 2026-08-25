@@ -5,7 +5,7 @@ school project. One Windows or Linux machine runs the Node.js server; players
 join from phones or computers through the same URL. The server owns rooms,
 turns, decks, hidden information, scores and win conditions.
 
-Version 0.3 contains a playable, server-authoritative core for every game plus
+Version 0.4 contains a playable, server-authoritative core for every game plus
 the complete visual-table pass: local illustrated card decks, game-specific
 surfaces, explicit action consoles, responsive scoreboards and clearer result
 feedback. Advanced tournament variants, moderation, persistence and exhaustive
@@ -15,22 +15,26 @@ project, not a real-money or production gambling service.
 ## What works now
 
 - responsive dashboard containing all 13 requested game entries;
-- live public lobby list and private rooms reachable by code;
-- optional private-room password stored as a salted `scrypt` digest;
+- live public lobby list and private rooms reached with generated code plus password;
+- one-click room-code copy, host kick controls and ready-state labels;
+- private-room passwords stored as salted `scrypt` digests;
 - game-specific limits up to 40 players, with exact-count games kept strict;
 - stable browser player id, 30-second reconnect grace and host transfer;
 - automatic deletion of empty and stale rooms;
 - per-player room projections, action versioning and socket rate limiting;
 - playable engines and browser controls for all 13 modes;
 - local 52-card SVG deck and authentic public-domain Neapolitan card images;
-- table-specific layouts, separate leaderboards, chip trays and result panels;
+- table-specific layouts, persistent match leaderboards, chip trays and large final-result panels;
 - Blackjack bets, hit/stand, split, double, dealer resolution and chips;
-- Uno action cards, wild colors, optional stacking and server-private hands;
+- Uno action cards, post-play Jolly color selection, optional stacking and server-private hands;
 - Scopa/Briscola Italian-deck rules, teams, captures, tricks and scoring;
 - Hold'em blinds, betting streets, all-ins, side pots and seven-card evaluator;
 - Burraco draw/meld/discard loop, pozzetti and clean/dirty burraco scoring;
 - Battleship secret placement, Chess/Checkers validation, Categories voting,
-  Hangman, Connect Four and both drawing rotations;
+  two-mode Hangman, animated Connect Four and both timed drawing rotations;
+- playable server-side bots for Blackjack, Uno, Battleship, Chess/Checkers,
+  Tic-Tac-Toe and Connect Four;
+- server deadlines, maximum rounds and correct 10/5/0 Categories scoring;
 - typo-tolerant drawing guesses with explicit system feedback and undo;
 - Info button on game cards and in the bottom-right of every room;
 - short and deep rules plus generated SVG examples for every game;
@@ -178,5 +182,5 @@ rate limits, monitoring and an explicit decision about who may join.
 
 ## Licence
 
-MIT for source code. Card artwork is not bundled; any future Neapolitan assets
-must have their own redistribution licence and attribution.
+MIT for source code. Bundled card artwork keeps its own licence and attribution
+inside each deck's `ATTRIBUTION.md` file.

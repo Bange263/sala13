@@ -54,6 +54,29 @@ export function statusBanner(title, description = "", tone = "neutral") {
   return banner;
 }
 
+export function finalResultPanel(room) {
+  if (!room?.lastResult) return null;
+  const result = room.lastResult;
+  const panel = el("section", "final-result-panel");
+  panel.dataset.draw = String(Boolean(result.isDraw));
+  panel.dataset.selfWinner = String(result.winnerIds?.includes(room.selfPlayerId) ?? false);
+  panel.setAttribute("role", "status");
+  panel.append(
+    el("span", "final-result-kicker", result.isDraw ? "PARTITA TERMINATA" : "RISULTATO UFFICIALE"),
+    el("strong", "final-result-title", result.title),
+    el("p", "final-result-detail", result.detail)
+  );
+  const score = el("div", "final-score-strip");
+  for (const player of room.players) {
+    const item = el("span", "final-score-item");
+    item.dataset.winner = String(result.winnerIds?.includes(player.id) ?? false);
+    item.append(el("small", "", player.name), el("strong", "", `${room.matchScores?.[player.id] ?? 0} ${room.matchScores?.[player.id] === 1 ? "vittoria" : "vittorie"}`));
+    score.append(item);
+  }
+  panel.append(score);
+  return panel;
+}
+
 export function leaderboard(room, rows, {
   title = "Classifica",
   subtitle = "Aggiornamento in tempo reale",
@@ -69,9 +92,9 @@ export function leaderboard(room, rows, {
     name: row.name ?? playerName(room, row.id),
     value: row.value ?? 0,
     valueLabel: row.valueLabel ?? String(row.value ?? 0),
-    detail: row.detail ?? "",
+    detail: `${row.detail ?? ""}${room.matchScores?.[row.id] !== undefined ? `${row.detail ? " · " : ""}${room.matchScores[row.id]} vittorie` : ""}`,
     active: Boolean(row.active),
-    state: row.state ?? "",
+    state: row.state || (room.lastResult?.winnerIds?.includes(row.id) ? "winner" : ""),
     order: index
   }));
   if (sort) normalized.sort((left, right) => Number(right.value) - Number(left.value) || left.order - right.order);

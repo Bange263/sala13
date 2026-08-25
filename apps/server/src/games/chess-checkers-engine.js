@@ -368,14 +368,28 @@ export class ChessCheckersEngine {
   }
 
   static view(state, playerId) {
+    const yourColor = state.colors[playerId] ?? null;
+    const legalMoves = state.currentPlayerId === playerId && !state.result
+      ? (state.variant === "checkers" ? legalCheckerMoves(state, yourColor) : legalChessMoves(state, yourColor))
+          .map(({ from, to }) => ({ from, to }))
+      : [];
     return {
       ...state,
       repetition: undefined,
-      yourColor: state.colors[playerId] ?? null
+      yourColor,
+      legalMoves
     };
   }
 
   static isFinished(state) {
     return Boolean(state.result);
+  }
+
+  static botAction({ playerId, state }) {
+    if (state.currentPlayerId !== playerId || state.result) return null;
+    const color = state.colors[playerId];
+    const moves = state.variant === "checkers" ? legalCheckerMoves(state, color) : legalChessMoves(state, color);
+    const move = moves.find((candidate) => state.board[candidate.to]) ?? moves[0];
+    return move ? { type: "move", from: move.from, to: move.to, promotion: "Q" } : null;
   }
 }

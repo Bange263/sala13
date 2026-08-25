@@ -94,6 +94,79 @@
   align-items: stretch;
 }
 
+.final-result-panel {
+  position: relative;
+  z-index: 6;
+  display: grid;
+  gap: 10px;
+  padding: clamp(24px, 4vw, 42px);
+  overflow: hidden;
+  border-bottom: 1px solid #b9cdbd;
+  background: linear-gradient(120deg, #173d2d, #2f7656 62%, #3f805f);
+  color: #fffaf0;
+  animation: result-reveal 560ms cubic-bezier(.2,.9,.25,1) both;
+}
+
+.final-result-panel::after {
+  position: absolute;
+  top: -70px;
+  right: -35px;
+  width: 230px;
+  height: 230px;
+  border: 32px solid rgb(239 199 103 / 27%);
+  border-radius: 50%;
+  content: "";
+}
+
+.final-result-panel[data-draw="true"] { background: linear-gradient(120deg, #534a3e, #7b684d); }
+
+.final-result-kicker {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.final-result-title {
+  max-width: 900px;
+  font-family: Georgia, serif;
+  font-size: clamp(2rem, 5vw, 4.4rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.final-result-detail {
+  max-width: 720px;
+  margin: 0;
+  color: #e0eadf;
+  line-height: 1.45;
+}
+
+.final-score-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.final-score-item {
+  display: grid;
+  min-width: 125px;
+  gap: 2px;
+  padding: 8px 11px;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 14%);
+}
+
+.final-score-item[data-winner="true"] {
+  border-color: #efc767;
+  background: rgb(239 199 103 / 18%);
+}
+
+.final-score-item small { opacity: .76; }
+.final-score-item strong { font-size: .82rem; }
+
 .game-table-surface {
   display: grid;
   min-width: 0;
@@ -588,6 +661,23 @@ button.casino-chip:hover {
   box-shadow: inset 0 0 0 9px #8a5735, inset 0 0 0 12px #d0a46d;
 }
 
+.blackjack-guide-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 14px;
+  background: rgb(12 48 34 / 55%);
+}
+
+.blackjack-guide-strip .table-metric {
+  background: rgb(255 255 255 / 11%);
+  color: #fffaf0;
+}
+
+.blackjack-guide-strip .table-metric span { color: #d7e4d8; }
+
 .dealer-rack {
   display: grid;
   justify-items: center;
@@ -834,6 +924,49 @@ button.casino-chip:hover {
 .uno-color-choice[data-color="green"] { background: #2f7656; }
 .uno-color-choice[data-color="blue"] { background: #356c91; }
 .uno-color-choice[data-selected="true"] { border-color: #fffaf0; box-shadow: 0 0 0 2px #202722; }
+
+.uno-live-color-choice {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 3px solid #efc767;
+  border-radius: 18px;
+  background: #202722;
+  color: #fffaf0;
+  text-align: center;
+  box-shadow: 0 16px 35px rgb(25 31 27 / 24%);
+  animation: result-reveal 300ms ease-out;
+}
+
+.uno-live-color-choice .uno-color-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
+  background: transparent;
+}
+
+.uno-color-choice-large {
+  min-height: 64px;
+  border: 4px solid #fffaf0;
+  border-radius: 14px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 900;
+  text-shadow: 0 1px 2px #000;
+  transition: transform 130ms ease;
+}
+
+.uno-color-choice-large:hover { transform: translateY(-5px) scale(1.03); }
+.uno-color-choice-large[data-color="red"] { background: #c94435; }
+.uno-color-choice-large[data-color="yellow"] { background: #d5a928; color: #252c28; text-shadow: none; }
+.uno-color-choice-large[data-color="green"] { background: #2f7656; }
+.uno-color-choice-large[data-color="blue"] { background: #356c91; }
+
+.uno-v2 .table-card.deck-uno {
+  width: 94px;
+  border: 2px solid #fffaf0;
+  border-radius: 13px;
+  filter: drop-shadow(0 10px 10px rgb(20 28 23 / 27%));
+}
 
 .uno-call-toggle {
   display: flex;
@@ -1272,10 +1405,27 @@ button.casino-chip:hover {
   width: min(100%, 710px);
   aspect-ratio: 1;
   grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, minmax(0, 1fr));
   overflow: hidden;
   border: 11px solid #3d3229;
   border-radius: 8px;
   box-shadow: 0 17px 35px rgb(40 32 26 / 24%);
+}
+
+.chess-v2 .game-v2-layout,
+.checkers-v2 .game-v2-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chess-v2 .game-leaderboard,
+.checkers-v2 .game-leaderboard {
+  border-top: 1px solid var(--line);
+  border-left: 0;
+}
+
+.chess-v2 .leaderboard-list,
+.checkers-v2 .leaderboard-list {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
 .board-square-v2 {
@@ -1300,6 +1450,35 @@ button.casino-chip:hover {
 .board-square-v2.selected {
   background: #d3ac56;
   box-shadow: inset 0 0 0 5px #f5d88b;
+}
+
+.board-square-v2.legal-target::after {
+  position: absolute;
+  z-index: 3;
+  width: 24%;
+  aspect-ratio: 1;
+  border: 3px solid rgb(255 255 255 / 86%);
+  border-radius: 50%;
+  background: #3186c4;
+  box-shadow: 0 2px 8px rgb(20 69 105 / 50%);
+  content: "";
+  pointer-events: none;
+  animation: legal-pulse 900ms ease-in-out infinite alternate;
+}
+
+.board-square-v2.legal-target[data-capture-target="true"]::after {
+  width: 68%;
+  border-width: 5px;
+  background: transparent;
+}
+
+.board-square-v2[data-last-move="true"] {
+  box-shadow: inset 0 0 0 5px rgb(71 157 215 / 58%);
+}
+
+.board-square-v2[data-last-move="true"] .chess-piece,
+.board-square-v2[data-last-move="true"] .checker-piece {
+  animation: piece-arrive 300ms ease-out;
 }
 
 .square-coordinate {
@@ -1361,6 +1540,7 @@ button.casino-chip:hover {
   width: min(100%, 540px);
   aspect-ratio: 1;
   grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 10px;
   padding: 12px;
   border-radius: 24px;
@@ -1370,6 +1550,10 @@ button.casino-chip:hover {
 
 .tic-cell-v2 {
   display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
   place-items: center;
   border: 0;
   border-radius: 13px;
@@ -1380,6 +1564,8 @@ button.casino-chip:hover {
   font-size: clamp(3.4rem, 10vw, 7rem);
   transition: transform 120ms ease, background 120ms ease;
 }
+
+.tic-cell-v2[data-last-move="true"] { animation: mark-arrive 260ms cubic-bezier(.2,.9,.25,1); }
 
 .tic-cell-v2:nth-child(even) {
   color: #315c4d;
@@ -1403,7 +1589,7 @@ button.casino-chip:hover {
 
 .letter-panel {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 16px;
   align-items: center;
   padding: 17px;
@@ -1428,6 +1614,19 @@ button.casino-chip:hover {
   font-family: Georgia, serif;
   font-size: 1.1rem;
 }
+
+.skip-letter-button {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #efc767;
+  border-radius: 10px;
+  background: transparent;
+  color: #fffaf0;
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.skip-letter-button:hover { background: rgb(239 199 103 / 20%); }
 
 .category-sheet {
   display: grid;
@@ -1724,13 +1923,15 @@ button.casino-chip:hover {
 .connect-slot-v2[data-mark="R"] .connect-disc {
   background: #c64c3d;
   box-shadow: inset 0 -7px 0 #a13b2f, inset 0 4px 0 #e17869;
-  animation: disc-drop 280ms ease-out;
 }
 
 .connect-slot-v2[data-mark="Y"] .connect-disc {
   background: #dab044;
   box-shadow: inset 0 -7px 0 #ad8529, inset 0 4px 0 #efd175;
-  animation: disc-drop 280ms ease-out;
+}
+
+.connect-slot-v2[data-last-drop="true"] .connect-disc {
+  animation: disc-drop 520ms cubic-bezier(.18,.75,.28,1.12);
 }
 
 .connect-slot-v2[data-winning="true"] {
@@ -1987,7 +2188,24 @@ button.casino-chip:hover {
 }
 
 @keyframes disc-drop {
-  from { transform: translateY(-150%); }
+  from { transform: translateY(var(--drop-distance, -300px)); }
+  75% { transform: translateY(7%); }
+}
+
+@keyframes result-reveal {
+  from { opacity: 0; transform: translateY(-18px) scale(.985); }
+}
+
+@keyframes legal-pulse {
+  to { transform: scale(1.16); }
+}
+
+@keyframes piece-arrive {
+  from { opacity: .35; transform: translateY(-18%); }
+}
+
+@keyframes mark-arrive {
+  from { opacity: .2; transform: scale(.45) rotate(-10deg); }
 }
 
 @media (max-width: 1180px) {
@@ -2067,6 +2285,10 @@ button.casino-chip:hover {
     grid-template-columns: 1fr;
   }
 
+  .blackjack-guide-strip {
+    grid-template-columns: 1fr;
+  }
+
   .uno-piles {
     min-height: 230px;
     grid-template-columns: 1fr 0.7fr 1fr;
@@ -2084,6 +2306,12 @@ button.casino-chip:hover {
 
   .uno-current-color strong {
     font-size: 0.64rem;
+  }
+
+  .uno-v2 .table-card.deck-uno { width: 72px; }
+
+  .uno-live-color-choice .uno-color-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .covered-card-group {
@@ -2133,6 +2361,10 @@ button.casino-chip:hover {
   }
 
   .letter-panel .table-countdown {
+    grid-column: 1 / -1;
+  }
+
+  .letter-panel .skip-letter-button {
     grid-column: 1 / -1;
   }
 
@@ -2224,7 +2456,12 @@ button.casino-chip:hover {
   .table-card,
   .connect-disc,
   .connect-slot-v2[data-winning="true"],
-  .table-countdown[data-urgent="true"] {
+  .table-countdown[data-urgent="true"],
+  .final-result-panel,
+  .board-square-v2.legal-target::after,
+  .board-square-v2[data-last-move="true"] .chess-piece,
+  .board-square-v2[data-last-move="true"] .checker-piece,
+  .tic-cell-v2[data-last-move="true"] {
     animation: none !important;
   }
 }

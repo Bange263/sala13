@@ -53,7 +53,7 @@ test("wildcard binding is reachable without using localhost as the server host",
 
   assert.equal(response.status, 200);
   assert.equal(health.ok, true);
-  assert.equal(health.version, "0.3.2");
+  assert.equal(health.version, "0.4.0");
 
   for (const path of ["/", "/device-mode.css", "/js/components/device-mode.js", "/js/utils/id.js"]) {
     const asset = await fetch(`http://127.0.0.1:${address.port}${path}`);

@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { randomUUID } from "node:crypto";
 import { ERROR_CODES, ROOM_VISIBILITY } from "@sala13/shared";
 import { resolveGame } from "../games/game-registry.js";
 import { PublicError } from "../utils/public-error.js";
@@ -12,6 +13,7 @@ export class RoomManager extends EventEmitter {
     this.socketMembership = new Map();
     this.playerTimers = new Map();
     this.emptyTimers = new Map();
+    this.deadlineTimers = new Map();
     this.disconnectGraceMs = disconnectGraceMs;
     this.emptyRoomTtlMs = emptyRoomTtlMs;
     this.staleRoomTtlMs = staleRoomTtlMs;
@@ -24,6 +26,7 @@ export class RoomManager extends EventEmitter {
     if (!game) throw new PublicError(ERROR_CODES.BAD_REQUEST, "Gioco non riconosciuto.");
 
     const normalizedSettings = this.normalizeSettings(game.definition, settings);
+    game.engine.validateSettings?.(normalizedSettings);
     let code;
     do code = generateRoomCode(); while (this.rooms.has(code));
 
@@ -97,6 +100,30 @@ export class RoomManager extends EventEmitter {
     return room;
   }
 
+  kick(socketId, targetPlayerId) {
+    const { room, playerId } = this.getMembership(socketId);
+    if (room.hostPlayerId !== playerId) throw new PublicError(ERROR_CODES.NOT_HOST, "Solo l'host può espellere un giocatore.");
+    if (targetPlayerId === playerId) throw new PublicError(ERROR_CODES.BAD_REQUEST, "L'host non può espellere se stesso.");
+    const target = room.players.get(targetPlayerId);
+    if (!target) throw new PublicError(ERROR_CODES.BAD_REQUEST, "Giocatore non trovato.");
+    if (target.socketId) this.socketMembership.delete(target.socketId);
+    room.removePlayer(targetPlayerId, { reason: "kicked" });
+    this.afterPlayerRemoval(room, "kicked");
+    return { room, removed: target };
+  }
+
+  addBot(socketId) {
+    const { room, playerId } = this.getMembership(socketId);
+    if (room.hostPlayerId !== playerId) throw new PublicError(ERROR_CODES.NOT_HOST, "Solo l'host può aggiungere un'IA.");
+    if (!room.engine.botAction) throw new PublicError(ERROR_CODES.BAD_REQUEST, "L'IA non è ancora disponibile per questa modalità.");
+    room.addBot({
+      playerId: randomUUID(),
+      name: `IA ${room.players.size}`
+    });
+    this.emitChanged(room, "bot-added");
+    return room;
+  }
+
   start(socketId) {
     const { room, playerId } = this.getMembership(socketId);
     room.start(playerId);
@@ -150,9 +177,14 @@ export class RoomManager extends EventEmitter {
       ...(Array.isArray(settings.categories) ? { categories: settings.categories.slice(0, 20) } : {}),
       ...(Array.isArray(settings.words) ? { words: settings.words.slice(0, 100) } : {}),
       ...(Number.isInteger(settings.roundSeconds) ? { roundSeconds: settings.roundSeconds } : {}),
+      ...(Number.isInteger(settings.promptSeconds) ? { promptSeconds: settings.promptSeconds } : {}),
+      ...(Number.isInteger(settings.maxRounds) ? { maxRounds: settings.maxRounds } : {}),
       ...(Number.isInteger(settings.startingChips) ? { startingChips: settings.startingChips } : {}),
       ...(Number.isInteger(settings.baseBet) ? { baseBet: settings.baseBet } : {}),
+      ...(Number.isInteger(settings.maxBet) ? { maxBet: settings.maxBet } : {}),
       ...(Number.isInteger(settings.bigBlind) ? { bigBlind: settings.bigBlind } : {}),
+      ...(typeof settings.hangmanMode === "string" ? { hangmanMode: settings.hangmanMode } : {}),
+      ...(typeof settings.customWord === "string" ? { customWord: settings.customWord.slice(0, 12) } : {}),
       ...(typeof settings.dealerHitsSoft17 === "boolean" ? { dealerHitsSoft17: settings.dealerHitsSoft17 } : {})
     };
   }
@@ -182,6 +214,7 @@ export class RoomManager extends EventEmitter {
     if (!room) return;
     this.rooms.delete(code);
     this.clearEmptyTimer(code);
+    this.clearDeadlineTimer(code);
     for (const player of room.players.values()) {
       this.clearPlayerTimer(code, player.id);
       if (player.socketId) this.socketMembership.delete(player.socketId);
@@ -196,7 +229,29 @@ export class RoomManager extends EventEmitter {
   }
 
   emitChanged(room, reason) {
+    this.scheduleDeadline(room);
     this.emit("room:changed", { room, reason });
+  }
+
+  scheduleDeadline(room) {
+    this.clearDeadlineTimer(room.code);
+    const deadline = room.status === "playing" ? Number(room.gameState?.deadline) : 0;
+    if (!Number.isFinite(deadline) || deadline <= 0 || !room.engine.onTimeout) return;
+    const timer = setTimeout(async () => {
+      this.deadlineTimers.delete(room.code);
+      const current = this.rooms.get(room.code);
+      if (!current) return;
+      const changed = await current.enqueue(() => current.applyTimeout(Date.now()));
+      if (changed) this.emitChanged(current, "game-timeout");
+    }, Math.max(0, deadline - Date.now() + 25));
+    timer.unref?.();
+    this.deadlineTimers.set(room.code, timer);
+  }
+
+  clearDeadlineTimer(code) {
+    const timer = this.deadlineTimers.get(code);
+    if (timer) clearTimeout(timer);
+    this.deadlineTimers.delete(code);
   }
 
   playerTimerKey(code, playerId) {
@@ -220,5 +275,6 @@ export class RoomManager extends EventEmitter {
     clearInterval(this.sweeper);
     for (const timer of this.playerTimers.values()) clearTimeout(timer);
     for (const timer of this.emptyTimers.values()) clearTimeout(timer);
+    for (const timer of this.deadlineTimers.values()) clearTimeout(timer);
   }
 }

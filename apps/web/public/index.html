@@ -112,7 +112,7 @@
               />
             </label>
             <label>
-              Password <span class="optional">facoltativa</span>
+              Password <span class="optional">obbligatoria se la stanza è privata</span>
               <input id="join-password" name="password" type="password" maxlength="64" autocomplete="current-password" />
             </label>
             <button class="button button-dark" type="submit">Entra nella stanza</button>
@@ -150,8 +150,9 @@
             <h1 id="room-game-name">Gioco</h1>
           </div>
           <button class="room-code-card" id="copy-room-code" type="button" title="Copia codice stanza">
-            <span>Codice stanza</span>
+            <span>Codice stanza · premi per copiare</span>
             <strong id="room-code-label">------</strong>
+            <small aria-hidden="true">⧉ Copia codice</small>
           </button>
         </div>
 
@@ -166,6 +167,7 @@
               <p class="ready-summary" id="ready-summary"></p>
               <button class="button button-dark" id="ready-button" type="button">Segna come pronto</button>
               <button class="button button-primary" id="start-button" type="button" hidden>Avvia partita</button>
+              <button class="button button-quiet" id="add-bot-button" type="button" hidden>+ Aggiungi IA</button>
             </div>
           </aside>
 
@@ -207,8 +209,9 @@
           </fieldset>
 
           <label id="create-password-row" hidden>
-            Password <span class="optional">facoltativa: il codice funziona comunque</span>
+            Password <span class="optional">obbligatoria per le stanze private</span>
             <input id="create-password" name="password" type="password" maxlength="64" autocomplete="new-password" />
+            <small class="field-help">Sala13 genera automaticamente il codice stanza dopo la creazione. Gli invitati dovranno inserire sia quel codice sia questa password.</small>
           </label>
 
           <label>
@@ -240,8 +243,16 @@
               <textarea id="create-categories" name="categories" rows="5" placeholder="Nomi&#10;Cose&#10;Città&#10;Animali"></textarea>
             </label>
             <label id="timer-setting" hidden>
-              Durata round in secondi
+              Durata round/disegno in secondi
               <input id="create-round-seconds" name="roundSeconds" type="number" min="30" max="600" value="120" />
+            </label>
+            <label id="prompt-timer-setting" hidden>
+              Tempo per scrivere prompt/didascalia
+              <input id="create-prompt-seconds" name="promptSeconds" type="number" min="30" max="300" value="60" />
+            </label>
+            <label id="rounds-setting" hidden>
+              Numero massimo di round
+              <input id="create-max-rounds" name="maxRounds" type="number" min="1" max="20" value="5" />
             </label>
             <label id="chips-setting" hidden>
               Chip iniziali
@@ -251,6 +262,10 @@
               Puntata base suggerita
               <input id="create-base-bet" name="baseBet" type="number" min="10" max="500" value="100" />
             </label>
+            <label id="max-bet-setting" hidden>
+              Puntata massima <span class="optional">9999 = senza limite</span>
+              <input id="create-max-bet" name="maxBet" type="number" min="10" max="9999" value="9999" />
+            </label>
             <label id="blind-setting" hidden>
               Grande buio
               <input id="create-big-blind" name="bigBlind" type="number" min="10" max="10000" value="20" />
@@ -258,6 +273,17 @@
             <label id="soft17-setting" class="checkbox-setting" hidden>
               <input id="create-soft17" name="dealerHitsSoft17" type="checkbox" />
               Il banco pesca con soft 17
+            </label>
+            <label id="hangman-mode-setting" hidden>
+              Modalità Impiccato
+              <select id="create-hangman-mode" name="hangmanMode">
+                <option value="classic">Classica · parola casuale, un turno alla volta</option>
+                <option value="custom">Personalizzata · l'host sceglie la parola</option>
+              </select>
+            </label>
+            <label id="hangman-word-setting" hidden>
+              Parola segreta <span class="optional">3–12 lettere, presente nel dizionario</span>
+              <input id="create-hangman-word" name="customWord" type="password" minlength="3" maxlength="12" autocomplete="off" />
             </label>
           </div>
 

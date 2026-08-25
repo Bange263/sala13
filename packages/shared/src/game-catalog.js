@@ -18,7 +18,7 @@ export const GAME_CATALOG = Object.freeze([
       deep: [
         detail("Turno", "Puntata, distribuzione di due carte, azioni del giocatore e infine turno del banco. Hit pesca, Stand si ferma, Double raddoppia e riceve una sola carta."),
         detail("Split", "Con due carte dello stesso valore si possono creare due mani. Il server conserva separatamente puntate, carte, stato e risultato di ciascuna mano."),
-        detail("Regole configurabili", "Soft 17, payout 3:2 o 6:5, numero di mazzi, assicurazione e limiti di puntata devono essere fissati prima dell'avvio e mostrati nell'Info.")
+        detail("Regole configurabili", "Chip iniziali, puntata suggerita, puntata massima e soft 17 vengono fissati nella lobby. Il valore 9999 rende la puntata massima uguale al saldo disponibile.")
       ]
     },
     example: { type: "blackjack", title: "Esempio: blackjack naturale" }
@@ -39,7 +39,7 @@ export const GAME_CATALOG = Object.freeze([
       ],
       deep: [
         detail("Accumulo", "Lo stacking di +2/+4 non è una regola universale: Sala13 lo tratta come opzione della stanza e indica chiaramente quali combinazioni sono ammesse."),
-        detail("Jolly +4", "Il server sa quali colori possiede il giocatore e può verificare se il +4 è legale, senza rivelare la mano agli avversari."),
+        detail("Jolly +4", "Il server sa quali colori possiede il giocatore e può verificare se il +4 è legale. Il colore si sceglie solo dopo aver calato il Jolly, in una fase dedicata."),
         detail("Fine manche", "Il punteggio può essere disattivato, calcolato sulle carte rimaste oppure accumulato su più manche fino a una soglia.")
       ]
     },
@@ -216,7 +216,7 @@ export const GAME_CATALOG = Object.freeze([
       deep: [
         detail("Categorie", "Il catalogo predefinito include classiche, cultura, scuola, sport, cibo e fantasia. L'host può selezionarle o aggiungerne prima del via."),
         detail("Punteggio", "Configurazione tipica: 10 punti risposta valida unica, 5 se condivisa, 0 se vuota o respinta. Soglia voto e astensione sono configurabili."),
-        detail("Tempo affidabile", "Il server comunica timestamp di inizio/fine; i client visualizzano il conto alla rovescia ma il server decide se una consegna è in tempo.")
+        detail("Tempo affidabile", "Il server comunica e applica la scadenza, passa automaticamente alla revisione e impedisce consegne tardive. L'host può saltare la lettera e scegliere il numero massimo di round.")
       ]
     },
     example: { type: "categories", title: "Esempio: lettera e categorie" }
@@ -238,7 +238,7 @@ export const GAME_CATALOG = Object.freeze([
       deep: [
         detail("Privacy parola", "La soluzione resta solo sul server e, se presente, sul client del suggeritore. Agli altri arriva una maschera con gli indici rivelati."),
         detail("Accenti", "La normalizzazione può ignorare maiuscole e accenti per il confronto, conservando però la grafia originale nella rivelazione finale."),
-        detail("Modalità", "Cooperativa, a turni o squadre; dizionari e parole personalizzate devono essere filtrati in base al contesto scolastico.")
+        detail("Modalità", "Classica usa una parola casuale e permette di agire a un giocatore per volta. Personalizzata rende l'host paroliere e accetta una parola di 3–12 lettere presente nel dizionario locale.")
       ]
     },
     example: { type: "hangman", title: "Esempio: disegno a quattro errori" }
@@ -281,7 +281,7 @@ export const GAME_CATALOG = Object.freeze([
       ],
       deep: [
         detail("Canvas", "Il server accetta tratti solo dal disegnatore attivo, limita punti e frequenza, assegna un id e li inoltra nell'ordine canonico."),
-        detail("Prompt", "Parole e consegne sono viste soltanto dal destinatario. Indizi in chat vengono normalizzati per impedire l'invio diretto della soluzione."),
+        detail("Prompt", "Parole e consegne sono viste soltanto dal destinatario. Prompt, didascalie e disegni hanno timer visibili e scadenze applicate dal server."),
         detail("Recupero", "I tratti sono registrati come vettori compatti; un giocatore che rientra riceve snapshot più operazioni successive, non un flusso storico infinito.")
       ]
     },

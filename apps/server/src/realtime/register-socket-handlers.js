@@ -9,6 +9,7 @@ import {
   createRoomSchema,
   gameActionSchema,
   joinRoomSchema,
+  kickSchema,
   readySchema
 } from "./schemas.js";
 
@@ -140,6 +141,26 @@ export function registerSocketHandlers(io, roomManager, config) {
       CLIENT_EVENTS.ROOM_START,
       guarded(null, async () => {
         const room = roomManager.start(socket.id);
+        return { room: room.viewFor(roomManager.getMembership(socket.id).playerId) };
+      })
+    );
+
+    socket.on(
+      CLIENT_EVENTS.ROOM_KICK,
+      guarded(kickSchema, async ({ playerId }) => {
+        const { room, removed } = roomManager.kick(socket.id, playerId);
+        if (removed.socketId) {
+          io.to(removed.socketId).emit(SERVER_EVENTS.ROOM_CLOSED, { code: room.code, reason: "kicked" });
+          await io.sockets.sockets.get(removed.socketId)?.leave(room.code);
+        }
+        return { room: room.viewFor(roomManager.getMembership(socket.id).playerId) };
+      })
+    );
+
+    socket.on(
+      CLIENT_EVENTS.ROOM_ADD_BOT,
+      guarded(null, async () => {
+        const room = roomManager.addBot(socket.id);
         return { room: room.viewFor(roomManager.getMembership(socket.id).playerId) };
       })
     );

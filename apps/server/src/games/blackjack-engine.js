@@ -109,7 +109,9 @@ export class BlackjackEngine {
     requirePlayers(players, { min: 2, max: 12 });
     const deck = shuffledFrenchDeck({ decks: 6, prefix: `bj-${Date.now()}` });
     const baseBet = Math.max(10, Math.min(500, Number(settings.baseBet) || 100));
-    const startingChips = Math.max(baseBet * 2, Math.min(100_000, Number(settings.startingChips) || 1_000));
+    const startingChips = Math.max(baseBet * 2, Math.min(1_000_000, Number(settings.startingChips) || 1_000));
+    const requestedMaxBet = Math.max(10, Math.min(9_999, Number(settings.maxBet) || 9_999));
+    const maxBet = requestedMaxBet === 9_999 ? 9_999 : Math.max(baseBet, requestedMaxBet);
     const playerStates = Object.fromEntries(players.map((player) => [player.id, {
       chips: startingChips,
       hands: [],
@@ -125,7 +127,7 @@ export class BlackjackEngine {
       deck,
       dealer,
       playerStates,
-      settings: { baseBet, startingChips, dealerHitsSoft17: Boolean(settings.dealerHitsSoft17) }
+      settings: { baseBet, maxBet, startingChips, dealerHitsSoft17: Boolean(settings.dealerHitsSoft17) }
     };
   }
 
@@ -136,7 +138,10 @@ export class BlackjackEngine {
       const record = next.playerStates[playerId];
       if (record.hands.length > 0) invalid("Hai già confermato la puntata.");
       const bet = Number(action.amount);
-      if (!Number.isInteger(bet) || bet < 10 || bet > record.chips) invalid("Puntata non valida.");
+      const effectiveMaximum = next.settings.maxBet === 9_999 ? record.chips : Math.min(record.chips, next.settings.maxBet);
+      if (!Number.isInteger(bet) || bet < 10 || bet > effectiveMaximum) {
+        invalid(`Puntata non valida: il massimo del tavolo è ${next.settings.maxBet === 9_999 ? "il tuo saldo" : `${next.settings.maxBet} chip`}.`);
+      }
       record.chips -= bet;
       record.hands = [makeHand([], bet)];
       if (next.order.every((id) => next.playerStates[id].hands.length === 1)) {
@@ -232,5 +237,22 @@ export class BlackjackEngine {
 
   static isFinished(state) {
     return state.phase === "finished";
+  }
+
+  static botPlayerToAct({ players, state }) {
+    if (state.phase !== "betting") return null;
+    return state.order.find((id) => players.find((player) => player.id === id)?.isBot && state.playerStates[id].hands.length === 0) ?? null;
+  }
+
+  static botAction({ playerId, state }) {
+    const record = state.playerStates[playerId];
+    if (state.phase === "betting") {
+      const maximum = state.settings.maxBet === 9_999 ? record.chips : Math.min(record.chips, state.settings.maxBet);
+      return { type: "bet", amount: Math.min(maximum, state.settings.baseBet) };
+    }
+    if (state.phase !== "players" || state.currentPlayerId !== playerId) return null;
+    const hand = activeHand(record);
+    if (!hand) return null;
+    return { type: handValue(hand.cards).value < 17 ? "hit" : "stand" };
   }
 }

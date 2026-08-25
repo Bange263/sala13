@@ -5,6 +5,7 @@ import {
 } from "@sala13/shared";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { PublicError } from "../utils/public-error.js";
+import { deriveGameOutcome } from "../games/game-outcome.js";
 
 export class Room {
   constructor({ code, game, host, settings, visibility, password }) {
@@ -19,6 +20,8 @@ export class Room {
     this.status = ROOM_STATUS.LOBBY;
     this.players = new Map();
     this.gameState = null;
+    this.lastResult = null;
+    this.matchScores = new Map();
     this.version = 0;
     this.createdAt = Date.now();
     this.updatedAt = this.createdAt;
@@ -72,11 +75,24 @@ export class Room {
       ready: false,
       connected: true,
       joinedAt: Date.now(),
-      disconnectedAt: null
+      disconnectedAt: null,
+      isBot: false
     };
     this.players.set(playerId, player);
+    if (!this.matchScores.has(playerId)) this.matchScores.set(playerId, 0);
     this.touch();
     return { player, replacedSocketId: null };
+  }
+
+  addBot({ playerId, name }) {
+    if (this.status === ROOM_STATUS.PLAYING) {
+      throw new PublicError(ERROR_CODES.BAD_REQUEST, "Non puoi aggiungere un'IA durante la partita.");
+    }
+    const { player } = this.addPlayer({ playerId, socketId: null, name, password: "" }, { skipPassword: true });
+    player.isBot = true;
+    player.ready = true;
+    this.touch();
+    return player;
   }
 
   markDisconnected(playerId) {
@@ -90,19 +106,35 @@ export class Room {
     return true;
   }
 
-  removePlayer(playerId) {
+  removePlayer(playerId, { reason = "left" } = {}) {
     const removed = this.players.get(playerId);
     if (!removed) return null;
     this.players.delete(playerId);
+    this.matchScores.delete(playerId);
 
     if (this.hostPlayerId === playerId) {
-      this.hostPlayerId = this.players.values().next().value?.id ?? null;
+      this.hostPlayerId = [...this.players.values()].find((player) => !player.isBot)?.id ?? null;
+    }
+
+    if (![...this.players.values()].some((player) => !player.isBot)) {
+      for (const bot of [...this.players.values()].filter((player) => player.isBot)) {
+        this.players.delete(bot.id);
+        this.matchScores.delete(bot.id);
+      }
+      this.hostPlayerId = null;
     }
 
     if (this.status === ROOM_STATUS.PLAYING && !this.engine.isFinished?.(this.gameState)) {
       this.status = ROOM_STATUS.FINISHED;
+      this.lastResult = {
+        title: "Partita interrotta",
+        detail: reason === "kicked" ? "Un partecipante è stato espulso dall'host." : "Un partecipante ha lasciato il tavolo.",
+        winnerIds: [],
+        isDraw: false,
+        finishedAt: Date.now()
+      };
       this.gameState = null;
-      for (const player of this.players.values()) player.ready = false;
+      for (const player of this.players.values()) player.ready = Boolean(player.isBot);
     }
 
     this.touch();
@@ -156,7 +188,51 @@ export class Room {
 
     this.gameState = this.engine.start({ players: connected, settings: this.settings });
     this.status = ROOM_STATUS.PLAYING;
+    this.lastResult = null;
+    this.advanceBots();
+    this.finishGameIfNeeded();
     this.touch();
+  }
+
+  finishGameIfNeeded() {
+    if (!this.gameState || !this.engine.isFinished(this.gameState) || this.status === ROOM_STATUS.FINISHED) return false;
+    const players = this.connectedPlayers;
+    this.lastResult = deriveGameOutcome(this.gameId, this.gameState, players);
+    for (const winnerId of this.lastResult.winnerIds) {
+      this.matchScores.set(winnerId, (this.matchScores.get(winnerId) ?? 0) + 1);
+    }
+    this.status = ROOM_STATUS.FINISHED;
+    for (const player of this.players.values()) player.ready = Boolean(player.isBot);
+    return true;
+  }
+
+  advanceBots() {
+    if (!this.engine.botAction) return;
+    let steps = 0;
+    while (this.status === ROOM_STATUS.PLAYING && this.gameState && steps < 32) {
+      const actingPlayerId = this.gameState.currentPlayerId ?? this.engine.botPlayerToAct?.({
+        players: this.connectedPlayers,
+        settings: this.settings,
+        state: this.gameState
+      });
+      const bot = this.players.get(actingPlayerId);
+      if (!bot?.isBot || this.engine.isFinished(this.gameState)) break;
+      const action = this.engine.botAction({
+        playerId: bot.id,
+        players: this.connectedPlayers,
+        settings: this.settings,
+        state: this.gameState
+      });
+      if (!action) break;
+      this.gameState = this.engine.applyAction({
+        action,
+        playerId: bot.id,
+        players: this.connectedPlayers,
+        settings: this.settings,
+        state: this.gameState
+      });
+      steps += 1;
+    }
   }
 
   applyAction(playerId, action, expectedVersion) {
@@ -176,12 +252,26 @@ export class Room {
       settings: this.settings,
       state: this.gameState
     });
-
-    if (this.engine.isFinished(this.gameState)) {
-      this.status = ROOM_STATUS.FINISHED;
-      for (const player of this.players.values()) player.ready = false;
-    }
+    this.advanceBots();
+    this.finishGameIfNeeded();
     this.touch();
+  }
+
+  applyTimeout(now) {
+    if (this.status !== ROOM_STATUS.PLAYING || !this.gameState || !this.engine.onTimeout) return false;
+    if (!Number.isFinite(Number(this.gameState.deadline)) || now < this.gameState.deadline) return false;
+    const next = this.engine.onTimeout({
+      now,
+      players: this.connectedPlayers,
+      settings: this.settings,
+      state: this.gameState
+    });
+    if (!next || next === this.gameState) return false;
+    this.gameState = next;
+    this.advanceBots();
+    this.finishGameIfNeeded();
+    this.touch();
+    return true;
   }
 
   enqueue(operation) {
@@ -208,7 +298,7 @@ export class Room {
     const self = this.players.get(playerId);
     if (!self) return null;
 
-    const { words: _secretWords, ...publicSettings } = this.settings;
+    const { words: _secretWords, customWord: _customWord, ...publicSettings } = this.settings;
     return {
       code: this.code,
       gameId: this.gameId,
@@ -221,12 +311,16 @@ export class Room {
       selfPlayerId: playerId,
       settings: publicSettings,
       startEligibility: this.getStartEligibility(),
+      canAddBot: Boolean(this.engine.botAction) && this.status !== ROOM_STATUS.PLAYING && this.players.size < this.maxPlayers,
+      matchScores: Object.fromEntries([...this.players.keys()].map((id) => [id, this.matchScores.get(id) ?? 0])),
+      lastResult: this.lastResult,
       players: [...this.players.values()].map((player) => ({
         id: player.id,
         name: player.name,
         ready: player.ready,
         connected: player.connected,
-        isHost: player.id === this.hostPlayerId
+        isHost: player.id === this.hostPlayerId,
+        isBot: Boolean(player.isBot)
       })),
       gameState: this.gameState ? this.engine.view(this.gameState, playerId) : null
     };

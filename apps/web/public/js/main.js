@@ -26,7 +26,8 @@ const state = {
   room: null,
   lobbies: [],
   connectedClients: 0,
-  reconnecting: false
+  reconnecting: false,
+  drafts: new Map()
 };
 
 const gameById = new Map(GAME_CATALOG.map((game) => [game.id, game]));
@@ -62,19 +63,29 @@ const elements = {
   createStacking: document.querySelector("#create-stacking"),
   createCategories: document.querySelector("#create-categories"),
   createRoundSeconds: document.querySelector("#create-round-seconds"),
+  createPromptSeconds: document.querySelector("#create-prompt-seconds"),
+  createMaxRounds: document.querySelector("#create-max-rounds"),
   createStartingChips: document.querySelector("#create-starting-chips"),
   createBaseBet: document.querySelector("#create-base-bet"),
+  createMaxBet: document.querySelector("#create-max-bet"),
   createBigBlind: document.querySelector("#create-big-blind"),
   createSoft17: document.querySelector("#create-soft17"),
+  createHangmanMode: document.querySelector("#create-hangman-mode"),
+  createHangmanWord: document.querySelector("#create-hangman-word"),
   variantSetting: document.querySelector("#variant-setting"),
   modeSetting: document.querySelector("#mode-setting"),
   stackingSetting: document.querySelector("#stacking-setting"),
   categoriesSetting: document.querySelector("#categories-setting"),
   timerSetting: document.querySelector("#timer-setting"),
+  promptTimerSetting: document.querySelector("#prompt-timer-setting"),
+  roundsSetting: document.querySelector("#rounds-setting"),
   chipsSetting: document.querySelector("#chips-setting"),
   betSetting: document.querySelector("#bet-setting"),
+  maxBetSetting: document.querySelector("#max-bet-setting"),
   blindSetting: document.querySelector("#blind-setting"),
   soft17Setting: document.querySelector("#soft17-setting"),
+  hangmanModeSetting: document.querySelector("#hangman-mode-setting"),
+  hangmanWordSetting: document.querySelector("#hangman-word-setting"),
   implementationNote: document.querySelector("#implementation-note"),
   roomGameTag: document.querySelector("#room-game-tag"),
   roomGameName: document.querySelector("#room-game-name"),
@@ -85,6 +96,7 @@ const elements = {
   readyButton: document.querySelector("#ready-button"),
   readySummary: document.querySelector("#ready-summary"),
   startButton: document.querySelector("#start-button"),
+  addBotButton: document.querySelector("#add-bot-button"),
   gameStage: document.querySelector("#game-stage"),
   toastRegion: document.querySelector("#toast-region")
 };
@@ -249,11 +261,22 @@ function updateCreateGameOptions() {
   elements.stackingSetting.hidden = game.id !== "uno";
   elements.categoriesSetting.hidden = game.id !== "categories";
   elements.timerSetting.hidden = !["categories", "draw-and-pass"].includes(game.id);
+  elements.promptTimerSetting.hidden = game.id !== "draw-and-pass";
+  elements.roundsSetting.hidden = game.id !== "categories";
   elements.chipsSetting.hidden = !["blackjack", "texas-holdem"].includes(game.id);
   elements.betSetting.hidden = game.id !== "blackjack";
+  elements.maxBetSetting.hidden = game.id !== "blackjack";
   elements.blindSetting.hidden = game.id !== "texas-holdem";
   elements.soft17Setting.hidden = game.id !== "blackjack";
+  elements.hangmanModeSetting.hidden = game.id !== "hangman";
+  updateHangmanWordSetting();
   elements.implementationNote.textContent = "Motore server-authoritative attivo: stato, turni e dati privati vengono validati dal server.";
+}
+
+function updateHangmanWordSetting() {
+  const custom = elements.createGame.value === "hangman" && elements.createHangmanMode.value === "custom";
+  elements.hangmanWordSetting.hidden = !custom;
+  elements.createHangmanWord.required = custom;
 }
 
 function openCreateDialog(gameId = "tic-tac-toe") {
@@ -264,13 +287,14 @@ function openCreateDialog(gameId = "tic-tac-toe") {
   elements.createDialog.showModal();
 }
 
-function setRoom(room) {
+function setRoom(room, { scroll = false } = {}) {
+  if (state.room) captureDrafts();
   state.room = room;
   localStorage.setItem(storageKeys.roomCode, room.code);
   elements.homeView.hidden = true;
   elements.roomView.hidden = false;
   renderRoom();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function clearRoom() {
@@ -279,6 +303,25 @@ function clearRoom() {
   elements.roomView.hidden = true;
   elements.homeView.hidden = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function draftStorageKey(input) {
+  if (!state.room || !input.dataset.draftKey) return null;
+  return `${state.room.code}:${state.room.gameId}:${input.dataset.draftKey}`;
+}
+
+function captureDrafts() {
+  for (const input of elements.gameStage.querySelectorAll?.("[data-draft-key]") ?? []) {
+    const key = draftStorageKey(input);
+    if (key && !input.disabled) state.drafts.set(key, input.value);
+  }
+}
+
+function restoreDrafts() {
+  for (const input of elements.gameStage.querySelectorAll?.("[data-draft-key]") ?? []) {
+    const key = draftStorageKey(input);
+    if (key && state.drafts.has(key) && !input.disabled) input.value = state.drafts.get(key);
+  }
 }
 
 function renderPlayers(room) {
@@ -291,13 +334,27 @@ function renderPlayers(room) {
     avatar.textContent = player.name.slice(0, 1).toUpperCase();
     const name = document.createElement("span");
     name.className = "player-name";
-    name.textContent = `${player.name}${player.isHost ? " · host" : ""}${player.id === room.selfPlayerId ? " · tu" : ""}`;
+    name.textContent = `${player.name}${player.isBot ? " · IA" : ""}${player.isHost ? " · host" : ""}${player.id === room.selfPlayerId ? " · tu" : ""}`;
     const playerState = document.createElement("span");
     playerState.className = "player-state";
     playerState.dataset.ready = String(player.ready);
     playerState.dataset.connected = String(player.connected);
-    playerState.title = !player.connected ? "Disconnesso" : player.ready ? "Pronto" : "In attesa";
+    playerState.title = !player.connected ? "Disconnesso" : player.ready ? "Pronto" : "Non pronto";
+    playerState.textContent = !player.connected ? "Offline" : player.ready ? "✓ Pronto" : "○ Non pronto";
     row.append(avatar, name, playerState);
+    if (room.selfPlayerId === room.hostPlayerId && player.id !== room.selfPlayerId) {
+      const kick = button("Caccia", "player-kick-button", async () => {
+        if (!window.confirm(`Vuoi cacciare ${player.name} dalla stanza?`)) return;
+        try {
+          await emitAck(CLIENT_EVENTS.ROOM_KICK, { playerId: player.id });
+          toast(`${player.name} è stato espulso.`);
+        } catch (error) {
+          toast(error.message, "error");
+        }
+      });
+      kick.setAttribute("aria-label", `Caccia ${player.name}`);
+      row.append(kick);
+    }
     fragment.append(row);
   }
   elements.playerList.replaceChildren(fragment);
@@ -311,9 +368,9 @@ function renderWaitingStage(room, game) {
   number.className = "stage-number";
   number.textContent = String(room.players.length).padStart(2, "0");
   const heading = document.createElement("h2");
-  heading.textContent = "Il tavolo si sta formando";
+  heading.textContent = room.lastResult?.title ?? "Il tavolo si sta formando";
   const paragraph = document.createElement("p");
-  paragraph.textContent = "Condividi il codice, segnatevi tutti pronti e lascia che l'host avvii la partita.";
+  paragraph.textContent = room.lastResult?.detail ?? "Condividi il codice, segnatevi tutti pronti e lascia che l'host avvii la partita.";
   inner.append(number, heading, paragraph);
   wrapper.append(inner);
   elements.gameStage.replaceChildren(wrapper);
@@ -341,6 +398,7 @@ function renderRoom() {
   elements.readySummary.textContent = `${readyCount}/${connectedCount} pronti`;
   elements.startButton.disabled = !room.startEligibility?.canStart;
   elements.startButton.title = room.startEligibility?.canStart ? "Avvia la partita" : "Tutti i giocatori devono essere presenti e pronti";
+  elements.addBotButton.hidden = room.selfPlayerId !== room.hostPlayerId || !room.canAddBot;
 
   if ((room.status === "playing" || room.status === "finished") && room.gameState) {
     renderGame(elements.gameStage, room, async (action) => {
@@ -356,6 +414,7 @@ function renderRoom() {
   } else {
     renderWaitingStage(room, game);
   }
+  restoreDrafts();
 }
 
 async function joinPublicLobby(code) {
@@ -374,7 +433,7 @@ async function joinPublicLobby(code) {
       password: "",
       playerId: state.playerId
     });
-    setRoom(response.room);
+    setRoom(response.room, { scroll: true });
   } catch (error) {
     toast(error.message, "error");
   }
@@ -392,7 +451,7 @@ async function tryReconnect() {
       password: "",
       playerId: state.playerId
     });
-    setRoom(response.room);
+    setRoom(response.room, { scroll: true });
     toast("Sei rientrato nella stanza.");
   } catch (error) {
     if ([ERROR_CODES.ROOM_NOT_FOUND, ERROR_CODES.WRONG_PASSWORD].includes(error.code)) {
@@ -416,7 +475,7 @@ elements.joinForm.addEventListener("submit", async (event) => {
       playerId: state.playerId
     });
     elements.joinPassword.value = "";
-    setRoom(response.room);
+    setRoom(response.room, { scroll: true });
   } catch (error) {
     toast(error.message, "error");
   }
@@ -435,14 +494,21 @@ elements.createForm.addEventListener("submit", async (event) => {
     if (elements.createGame.value === "draw-and-pass") settings.mode = elements.createMode.value;
     if (elements.createGame.value === "uno") settings.stacking = elements.createStacking.checked;
     if (["categories", "draw-and-pass"].includes(elements.createGame.value)) settings.roundSeconds = Number(elements.createRoundSeconds.value);
+    if (elements.createGame.value === "draw-and-pass") settings.promptSeconds = Number(elements.createPromptSeconds.value);
     if (elements.createGame.value === "categories") {
+      settings.maxRounds = Number(elements.createMaxRounds.value);
       const categories = elements.createCategories.value.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean);
       if (categories.length > 0) settings.categories = categories;
     }
     if (["blackjack", "texas-holdem"].includes(elements.createGame.value)) settings.startingChips = Number(elements.createStartingChips.value);
     if (elements.createGame.value === "blackjack") {
       settings.baseBet = Number(elements.createBaseBet.value);
+      settings.maxBet = Number(elements.createMaxBet.value);
       settings.dealerHitsSoft17 = elements.createSoft17.checked;
+    }
+    if (elements.createGame.value === "hangman") {
+      settings.hangmanMode = elements.createHangmanMode.value;
+      if (settings.hangmanMode === "custom") settings.customWord = elements.createHangmanWord.value;
     }
     if (elements.createGame.value === "texas-holdem") settings.bigBlind = Number(elements.createBigBlind.value);
     const response = await emitAck(CLIENT_EVENTS.ROOM_CREATE, {
@@ -455,16 +521,19 @@ elements.createForm.addEventListener("submit", async (event) => {
     });
     elements.createPassword.value = "";
     elements.createDialog.close();
-    setRoom(response.room);
+    setRoom(response.room, { scroll: true });
+    toast(`Stanza creata. Codice ${response.room.code}: premilo in alto per copiarlo.`, "success");
   } catch (error) {
     toast(error.message, "error");
   }
 });
 
 elements.createGame.addEventListener("change", updateCreateGameOptions);
+elements.createHangmanMode.addEventListener("change", updateHangmanWordSetting);
 elements.createForm.addEventListener("change", (event) => {
   if (event.target.name === "visibility") {
     elements.createPasswordRow.hidden = event.target.value !== "private";
+    elements.createPassword.required = event.target.value === "private";
   }
 });
 
@@ -509,6 +578,20 @@ elements.startButton.addEventListener("click", async () => {
   }
 });
 
+elements.addBotButton.addEventListener("click", async () => {
+  try {
+    await emitAck(CLIENT_EVENTS.ROOM_ADD_BOT);
+    toast("IA aggiunta e già pronta.");
+  } catch (error) {
+    toast(error.message, "error");
+  }
+});
+
+document.querySelector(".brand").addEventListener("click", (event) => {
+  event.preventDefault();
+  if (!state.room) window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
 elements.joinCode.addEventListener("input", () => {
   elements.joinCode.value = elements.joinCode.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 });
@@ -532,6 +615,8 @@ socket.on(SERVER_EVENTS.ROOM_CLOSED, ({ reason }) => {
   clearRoom();
   const message = reason === "session-replaced"
     ? "Questa sessione è stata aperta in un'altra scheda."
+    : reason === "kicked"
+      ? "L'host ti ha espulso dalla stanza."
     : "La stanza è stata chiusa.";
   toast(message, "error");
 });

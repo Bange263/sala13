@@ -3,6 +3,8 @@ export const CLIENT_EVENTS = Object.freeze({
   ROOM_CREATE: "room:create",
   ROOM_JOIN: "room:join",
   ROOM_LEAVE: "room:leave",
+  ROOM_KICK: "room:kick",
+  ROOM_ADD_BOT: "room:add-bot",
   ROOM_READY: "room:ready",
   ROOM_START: "room:start",
   GAME_ACTION: "game:action"

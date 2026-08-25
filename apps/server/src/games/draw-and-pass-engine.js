@@ -169,6 +169,7 @@ function applyDraw(action, playerId, state) {
 function beginPassStep(state) {
   state.phase = state.step % 2 === 1 ? "drawing" : "caption";
   state.submitted = [];
+  state.deadline = Date.now() + (state.phase === "drawing" ? state.drawingSeconds : state.promptSeconds) * 1_000;
   for (let chainIndex = 0; chainIndex < state.chains.length; chainIndex += 1) {
     const chain = state.chains[chainIndex];
     chain.holderId = state.order[(chainIndex + state.step) % state.order.length];
@@ -180,6 +181,7 @@ function progressPass(state) {
   if (state.submitted.length !== state.order.length) return;
   if (state.step >= state.order.length - 1) {
     state.phase = "reveal";
+    state.deadline = null;
     for (const chain of state.chains) {
       delete chain.holderId;
       delete chain.draftStrokes;
@@ -196,6 +198,7 @@ function assignmentFor(state, playerId) {
 
 function applyPass(action, playerId, state) {
   const next = cloneState(state);
+  if (Date.now() > next.deadline) invalid("Tempo scaduto: attendi l'avanzamento automatico della fase.");
   if (action.type === "submit-prompt") {
     if (next.phase !== "prompt" || next.submitted.includes(playerId)) invalid("Prompt già consegnato o fase chiusa.");
     const text = String(action.text ?? "").trim().slice(0, 100);
@@ -248,7 +251,9 @@ function applyPass(action, playerId, state) {
   invalid("Azione Passa non riconosciuta.");
 }
 
-function startPass(order) {
+function startPass(order, settings) {
+  const promptSeconds = Math.max(30, Math.min(300, Number(settings.promptSeconds) || 60));
+  const drawingSeconds = Math.max(30, Math.min(600, Number(settings.roundSeconds) || 90));
   return {
     kind: "draw-and-pass",
     mode: "pass",
@@ -256,6 +261,9 @@ function startPass(order) {
     order,
     hostId: order[0],
     step: 0,
+    promptSeconds,
+    drawingSeconds,
+    deadline: Date.now() + promptSeconds * 1_000,
     submitted: [],
     chains: order.map((originId) => ({ originId, pages: [] }))
   };
@@ -267,7 +275,7 @@ export class DrawAndPassEngine {
   static start({ players, settings }) {
     requirePlayers(players, { min: 2, max: 24 });
     const order = players.map((player) => player.id);
-    return settings.mode === "pass" ? startPass(order) : startDraw(order, settings);
+    return settings.mode === "pass" ? startPass(order, settings) : startDraw(order, settings);
   }
 
   static applyAction({ action, playerId, state }) {
@@ -303,6 +311,9 @@ export class DrawAndPassEngine {
       order: state.order,
       hostId: state.hostId,
       step: state.step,
+      deadline: state.deadline,
+      promptSeconds: state.promptSeconds,
+      drawingSeconds: state.drawingSeconds,
       submitted: state.submitted,
       assignment: assignment ? {
         originId: assignment.originId,
@@ -315,5 +326,43 @@ export class DrawAndPassEngine {
 
   static isFinished(state) {
     return state.phase === "finished" || state.phase === "reveal";
+  }
+
+  static onTimeout({ state }) {
+    if (!state.deadline || state.phase === "finished" || state.phase === "reveal") return state;
+    const next = cloneState(state);
+    if (next.mode === "draw") {
+      if (next.phase !== "drawing") return state;
+      next.phase = "round-result";
+      next.winnerId = null;
+      next.guesses.push({ playerId: null, text: "Tempo scaduto: nessuno ha indovinato.", correct: false, match: "timeout", system: true });
+      next.deadline = null;
+      return next;
+    }
+
+    const missing = next.order.filter((id) => !next.submitted.includes(id));
+    if (next.phase === "prompt") {
+      for (const id of missing) {
+        const chain = next.chains.find((candidate) => candidate.originId === id);
+        chain.pages.push({ type: "text", playerId: id, content: prompt() });
+        next.submitted.push(id);
+      }
+      next.step = 1;
+      beginPassStep(next);
+      return next;
+    }
+    for (const id of missing) {
+      const chain = assignmentFor(next, id);
+      if (!chain) continue;
+      if (next.phase === "drawing") {
+        chain.pages.push({ type: "drawing", playerId: id, strokes: chain.draftStrokes ?? [] });
+        delete chain.draftStrokes;
+      } else if (next.phase === "caption") {
+        chain.pages.push({ type: "text", playerId: id, content: "Tempo scaduto" });
+      }
+      next.submitted.push(id);
+    }
+    progressPass(next);
+    return next;
   }
 }

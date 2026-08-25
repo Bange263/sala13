@@ -70,4 +70,26 @@ export class ConnectFourEngine {
   static isFinished(state) {
     return Boolean(state.winnerId || state.draw);
   }
+
+  static botAction({ playerId, state }) {
+    const validColumns = [3, 2, 4, 1, 5, 0, 6].filter((column) => state.board[column] === null);
+    const landingRow = (column) => {
+      let row = ROWS - 1;
+      while (row >= 0 && state.board[row * COLUMNS + column]) row -= 1;
+      return row;
+    };
+    const winsWith = (column, mark) => {
+      const row = landingRow(column);
+      if (row < 0) return false;
+      const board = [...state.board];
+      board[row * COLUMNS + column] = mark;
+      return Boolean(lineFrom(board, row, column, mark));
+    };
+    const ownMark = state.marks[playerId];
+    const opponentMark = Object.values(state.marks).find((mark) => mark !== ownMark);
+    const column = validColumns.find((candidate) => winsWith(candidate, ownMark))
+      ?? validColumns.find((candidate) => winsWith(candidate, opponentMark))
+      ?? validColumns[0];
+    return Number.isInteger(column) ? { type: "drop", column } : null;
+  }
 }

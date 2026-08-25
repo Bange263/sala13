@@ -4,6 +4,20 @@ The project is intentionally split into vertical slices. A “finished” engine
 includes server rules, private projections, tests, browser UI, reconnect and
 Info—not only a board that can be clicked.
 
+## v0.4 room control, results and timed-play checkpoint
+
+- generated room codes have an explicit copy control; private rooms require
+  both their generated code and a password;
+- hosts can remove participants and add server-controlled bots to supported games;
+- every table shows persistent match wins and an unmistakable final-result panel;
+- Categories uses server deadlines, random/skip letters, maximum rounds and
+  live 10/5/0 scoring without deleting another player's draft;
+- Passa il prompt applies visible, authoritative prompt/drawing deadlines;
+- Hangman has classic and dictionary-validated custom-word modes;
+- Uno asks for a Jolly colour after the card is played; boards expose legal
+  move hints, stable sizing and move/drop animations;
+- Blackjack exposes starting chips and a maximum bet (`9999` means unlimited).
+
 ## v0.3.2 LAN browser and device-layout checkpoint
 
 - player and drawing identifiers work over plain HTTP LAN/VPN origins where
