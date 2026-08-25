@@ -21,6 +21,54 @@ function parseStroke(action) {
   }
 }
 
+function normalizedGuess(value) {
+  return normalizeText(value)
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function withoutLeadingArticle(value) {
+  return value.replace(/^(?:un|uno|una|il|lo|la|i|gli|le|l)\s+/, "");
+}
+
+function damerauLevenshtein(left, right) {
+  const rows = left.length + 1;
+  const columns = right.length + 1;
+  const matrix = Array.from({ length: rows }, () => Array(columns).fill(0));
+  for (let row = 0; row < rows; row += 1) matrix[row][0] = row;
+  for (let column = 0; column < columns; column += 1) matrix[0][column] = column;
+  for (let row = 1; row < rows; row += 1) {
+    for (let column = 1; column < columns; column += 1) {
+      const substitution = left[row - 1] === right[column - 1] ? 0 : 1;
+      matrix[row][column] = Math.min(
+        matrix[row - 1][column] + 1,
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column - 1] + substitution
+      );
+      if (row > 1 && column > 1 && left[row - 1] === right[column - 2] && left[row - 2] === right[column - 1]) {
+        matrix[row][column] = Math.min(matrix[row][column], matrix[row - 2][column - 2] + 1);
+      }
+    }
+  }
+  return matrix[left.length][right.length];
+}
+
+export function classifyPromptGuess(guess, solution) {
+  const candidate = normalizedGuess(guess);
+  const expected = normalizedGuess(solution);
+  if (!candidate || !expected) return { kind: "wrong", distance: Infinity };
+  if (candidate === expected) return { kind: "exact", distance: 0 };
+  if (withoutLeadingArticle(candidate) === withoutLeadingArticle(expected)) {
+    return { kind: "typo", distance: 0, reason: "articolo omesso o aggiunto" };
+  }
+  const distance = damerauLevenshtein(candidate, expected);
+  const tolerance = expected.length <= 4 ? 0 : expected.length <= 7 ? 1 : expected.length <= 14 ? 2 : 3;
+  return distance <= tolerance
+    ? { kind: "typo", distance, reason: "piccolo errore di scrittura" }
+    : { kind: "wrong", distance };
+}
+
 function startDraw(order, settings) {
   const roundSeconds = Math.max(30, Math.min(600, Number(settings.roundSeconds) || 90));
   return {
@@ -66,13 +114,30 @@ function applyDraw(action, playerId, state) {
     next.strokes = [];
     return next;
   }
+  if (action.type === "undo") {
+    if (next.phase !== "drawing" || playerId !== next.drawerId) invalid("Solo il disegnatore può annullare un tratto.");
+    if (next.strokes.length === 0) invalid("Non ci sono tratti da annullare.");
+    next.strokes.pop();
+    return next;
+  }
   if (action.type === "guess") {
     if (next.phase !== "drawing" || playerId === next.drawerId) invalid("Non puoi inviare questa risposta.");
     if (Date.now() > next.deadline) invalid("Il tempo del round è terminato.");
     const text = String(action.text ?? "").trim().slice(0, 80);
     if (!text) invalid("Scrivi un tentativo.");
-    const correct = normalizeText(text) === normalizeText(next.prompt);
-    next.guesses.push({ playerId, text: correct ? "Risposta corretta" : text, correct });
+    const verdict = classifyPromptGuess(text, next.prompt);
+    const correct = verdict.kind !== "wrong";
+    next.guesses.push({
+      playerId,
+      text: verdict.kind === "exact"
+        ? "Risposta corretta."
+        : verdict.kind === "typo"
+          ? `Risposta corretta, ma con un ${verdict.reason}.`
+          : text,
+      correct,
+      match: verdict.kind,
+      system: correct
+    });
     if (correct) {
       next.scores[playerId] += 100;
       next.scores[next.drawerId] += 50;
@@ -155,6 +220,12 @@ function applyPass(action, playerId, state) {
   if (action.type === "clear") {
     if (next.phase !== "drawing" || next.submitted.includes(playerId)) invalid("Non puoi pulire il canvas.");
     chain.draftStrokes = [];
+    return next;
+  }
+  if (action.type === "undo") {
+    if (next.phase !== "drawing" || next.submitted.includes(playerId)) invalid("Non puoi annullare in questa fase.");
+    if (chain.draftStrokes.length === 0) invalid("Non ci sono tratti da annullare.");
+    chain.draftStrokes.pop();
     return next;
   }
   if (action.type === "submit-drawing") {

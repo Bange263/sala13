@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { GAME_CATALOG } from "@sala13/shared";
 import { resolveGame } from "../src/games/game-registry.js";
+import { classifyPromptGuess } from "../src/games/draw-and-pass-engine.js";
 import { evaluatePokerHand } from "../src/games/poker-engine.js";
 
 const players = [
@@ -212,4 +213,29 @@ test("pass-the-prompt mode rotates private assignments", () => {
   const view = engine.view(state, "player-a");
   assert.ok(view.assignment.source.content);
   assert.equal(view.chains, null);
+});
+
+test("drawing guesses accept small typos without accepting unrelated words", () => {
+  assert.deepEqual(classifyPromptGuess("forchetta", "forchetta"), { kind: "exact", distance: 0 });
+  assert.equal(classifyPromptGuess("vorcheta", "forchetta").kind, "typo");
+  assert.equal(classifyPromptGuess("un gatto astronauta", "gatto astronauta").kind, "typo");
+  assert.equal(classifyPromptGuess("automobile", "forchetta").kind, "wrong");
+
+  const engine = resolveGame("draw-and-pass").engine;
+  let state = start("draw-and-pass", { mode: "draw" });
+  state.prompt = "forchetta";
+  state = engine.applyAction({ action: { type: "guess", text: "vorcheta" }, playerId: "player-b", players, state });
+  assert.equal(state.phase, "round-result");
+  assert.equal(state.guesses[0].match, "typo");
+  assert.equal(state.guesses[0].system, true);
+  assert.match(state.guesses[0].text, /corretta/i);
+});
+
+test("drawing owner can undo only the most recent authoritative stroke", () => {
+  const engine = resolveGame("draw-and-pass").engine;
+  let state = start("draw-and-pass", { mode: "draw" });
+  const stroke = { id: "00000000-0000-4000-8000-000000000002", tool: "brush", color: "#112233", size: 5, points: [{ x: 0.1, y: 0.1 }, { x: 0.2, y: 0.2 }] };
+  state = engine.applyAction({ action: { type: "stroke", stroke }, playerId: "player-a", players, state });
+  state = engine.applyAction({ action: { type: "undo" }, playerId: "player-a", players, state });
+  assert.equal(state.strokes.length, 0);
 });

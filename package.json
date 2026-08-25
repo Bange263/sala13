@@ -1,6 +1,6 @@
 {
   "name": "sala13",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A self-hosted real-time multiplayer game room for classrooms and friends.",
   "type": "module",

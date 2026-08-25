@@ -4,6 +4,14 @@ The project is intentionally split into vertical slices. A “finished” engine
 includes server rules, private projections, tests, browser UI, reconnect and
 Info—not only a board that can be clicked.
 
+## v0.3 visual-table checkpoint
+
+Every mode now uses a dedicated responsive table instead of generic text
+controls. French and Neapolitan cards are local image assets; Blackjack and
+Poker expose separate chip/action consoles; every mode has a scoreboard or
+turn panel. Drawing guesses accept tightly bounded spelling mistakes, report
+the correction as a system message and support undoing the latest stroke.
+
 ## v0.2 checkpoint
 
 Phases 0–6 now have a playable core in the repository: every catalogue entry

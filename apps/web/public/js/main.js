@@ -1,7 +1,7 @@
 import { GAME_CATALOG } from "/shared/game-catalog.js";
 import { CLIENT_EVENTS, ERROR_CODES, SERVER_EVENTS } from "/shared/protocol.js";
 import { createInfoModal } from "./components/info-modal.js";
-import { renderGame } from "./games/game-renderer.js";
+import { renderGame } from "./games/game-renderer-v2.js";
 
 const storageKeys = {
   playerId: "sala13.playerId",

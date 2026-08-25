@@ -1,20 +1,14 @@
 # Neapolitan card artwork
 
-This starter intentionally ships without third-party card illustrations.
+The 40 card faces and `bg.jpg` in this directory come from the public-domain
+Neapolitan deck distributed by the open-source Scopa project:
 
-Before implementing Scopa or Briscola, place a complete, consistently styled
-40-card set here and record its author, source URL and licence in this file.
-Do not copy commercial scans. Prefer artwork you created yourselves or a set
-whose licence explicitly permits redistribution and modification.
+- source repository: https://github.com/OMerkel/scopa_marco
+- original public-domain collection: https://commons.wikimedia.org/wiki/Category:Naples_deck
+- source licensing note: https://github.com/OMerkel/scopa_marco/blob/master/README
 
-Expected stable identifiers:
+Only the public-domain files under `data/cards/Napoletane` were reused. No GPL
+application code from that project is included in Sala13.
 
-```text
-asso-bastoni.svg
-2-bastoni.svg
-...
-re-spade.svg
-```
-
-The server must use logical card ids such as `bastoni:1`; asset filenames are a
-presentation concern and must never be accepted as game actions.
+The server continues to use logical card ids. These filenames are presentation
+assets and are never accepted as authoritative game actions.

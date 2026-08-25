@@ -5,9 +5,10 @@ school project. One Windows or Linux machine runs the Node.js server; players
 join from phones or computers through the same URL. The server owns rooms,
 turns, decks, hidden information, scores and win conditions.
 
-Version 0.2 contains a playable, server-authoritative core for every game in
-the catalogue. The engines cover the complete match loop and protect hidden
-state. Advanced tournament variants, moderation, persistence and exhaustive
+Version 0.3 contains a playable, server-authoritative core for every game plus
+the complete visual-table pass: local illustrated card decks, game-specific
+surfaces, explicit action consoles, responsive scoreboards and clearer result
+feedback. Advanced tournament variants, moderation, persistence and exhaustive
 edge-case certification remain future hardening work; this is still a school
 project, not a real-money or production gambling service.
 
@@ -21,6 +22,8 @@ project, not a real-money or production gambling service.
 - automatic deletion of empty and stale rooms;
 - per-player room projections, action versioning and socket rate limiting;
 - playable engines and browser controls for all 13 modes;
+- local 52-card SVG deck and authentic public-domain Neapolitan card images;
+- table-specific layouts, separate leaderboards, chip trays and result panels;
 - Blackjack bets, hit/stand, split, double, dealer resolution and chips;
 - Uno action cards, wild colors, optional stacking and server-private hands;
 - Scopa/Briscola Italian-deck rules, teams, captures, tricks and scoring;
@@ -28,6 +31,7 @@ project, not a real-money or production gambling service.
 - Burraco draw/meld/discard loop, pozzetti and clean/dirty burraco scoring;
 - Battleship secret placement, Chess/Checkers validation, Categories voting,
   Hangman, Connect Four and both drawing rotations;
+- typo-tolerant drawing guesses with explicit system feedback and undo;
 - Info button on game cards and in the bottom-right of every room;
 - short and deep rules plus generated SVG examples for every game;
 - Windows, Raspberry Pi, Docker, systemd, Nginx and Tailscale instructions;
@@ -78,10 +82,12 @@ sala13/
 │   │   │   └── index.js
 │   │   └── test/
 │   └── web/public/
-│       ├── js/components/    # Info modal and SVG examples
-│       ├── js/games/         # browser renderers; never canonical rules
+│       ├── assets/cards/     # vendored French and Neapolitan artwork
+│       ├── js/components/    # Info modal and visual examples
+│       ├── js/games/         # visual tables; never canonical rules
 │       ├── index.html
-│       └── styles.css
+│       ├── styles.css
+│       └── game-tables.css
 ├── packages/shared/src/     # game catalogue, events, default categories
 ├── deploy/                  # systemd and Nginx templates
 ├── docs/                    # architecture, game plans, deployment, roadmap

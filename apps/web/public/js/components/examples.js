@@ -1,3 +1,5 @@
+import { cardSource } from "../games/card-media.js";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 function node(name, attributes = {}, text = null) {
@@ -35,6 +37,18 @@ function card(x, y, label, suit = "", color = "#1f2923", rotate = 0) {
   return group;
 }
 
+function imageCard(x, y, cardValue, deck = "french", { width = 76, height = 112, rotate = 0 } = {}) {
+  return node("image", {
+    x,
+    y,
+    width,
+    height,
+    href: cardSource(cardValue, deck),
+    preserveAspectRatio: "xMidYMid meet",
+    transform: `rotate(${rotate} ${x + width / 2} ${y + height / 2})`
+  });
+}
+
 function baseSvg(titleValue) {
   const svg = node("svg", { viewBox: "0 0 320 190", role: "img", "aria-label": titleValue });
   add(svg, node("title", {}, titleValue), node("rect", { width: 320, height: 190, fill: "#ece6da" }));
@@ -45,8 +59,8 @@ function blackjackExample(titleValue) {
   const svg = baseSvg(titleValue);
   add(
     svg,
-    card(66, 32, "A", "♠"),
-    card(166, 32, "K", "♥", "#a64032", 3),
+    imageCard(67, 27, { rank: "A", suit: "spades" }, "french"),
+    imageCard(169, 27, { rank: "K", suit: "hearts" }, "french", { rotate: 3 }),
     text(160, 167, "11 + 10 = 21", { "text-anchor": "middle", "font-size": 16 })
   );
   return svg;
@@ -54,18 +68,13 @@ function blackjackExample(titleValue) {
 
 function unoExample(titleValue) {
   const svg = baseSvg(titleValue);
-  const colors = ["#b33d31", "#d09b32", "#35694f", "#315d77"];
-  colors.forEach((color, index) => {
-    add(
-      svg,
-      node("rect", { x: 34 + index * 63, y: 38, width: 54, height: 84, rx: 10, fill: color, stroke: "#fffaf3", "stroke-width": 3 }),
-      text(61 + index * 63, 91, index === 3 ? "+4" : String(index + 2), {
-        fill: "#fffaf3",
-        "font-size": index === 3 ? 17 : 24,
-        "text-anchor": "middle"
-      })
-    );
-  });
+  const cards = [
+    { color: "red", value: "2" },
+    { color: "yellow", value: "reverse" },
+    { color: "green", value: "draw2" },
+    { color: "wild", value: "wild4" }
+  ];
+  cards.forEach((cardValue, index) => svg.append(imageCard(34 + index * 63, 34, cardValue, "uno", { width: 52, height: 91, rotate: index - 1.5 })));
   add(svg, text(160, 155, "Il jolly imposta il prossimo colore", { "text-anchor": "middle", "font-size": 13 }));
   return svg;
 }
@@ -74,9 +83,9 @@ function scopaExample(titleValue) {
   const svg = baseSvg(titleValue);
   add(
     svg,
-    card(28, 42, "7", "Denari", "#a97022"),
+    imageCard(28, 31, { rank: 7, suit: "denari" }, "italian", { width: 66, height: 116 }),
     text(121, 96, "+", { "font-family": "Georgia, serif", "font-size": 27 }),
-    card(143, 42, "3", "Coppe", "#a64032"),
+    imageCard(143, 31, { rank: 3, suit: "coppe" }, "italian", { width: 66, height: 116 }),
     text(245, 96, "= 10", { "font-family": "Georgia, serif", "font-size": 25 }),
     text(160, 164, "Il 10 prende 7 + 3", { "text-anchor": "middle", "font-size": 13 })
   );
@@ -87,8 +96,8 @@ function briscolaExample(titleValue) {
   const svg = baseSvg(titleValue);
   add(
     svg,
-    card(45, 38, "A", "Coppe", "#a64032", -3),
-    card(157, 38, "2", "Denari", "#a97022", 3),
+    imageCard(45, 28, { rank: 1, suit: "coppe" }, "italian", { width: 69, height: 121, rotate: -3 }),
+    imageCard(157, 28, { rank: 2, suit: "denari" }, "italian", { width: 69, height: 121, rotate: 3 }),
     node("path", { d: "M135 92 H151", stroke: "#1f2923", "stroke-width": 3 }),
     text(160, 164, "Denari è briscola: il 2 vince", { "text-anchor": "middle", "font-size": 13 })
   );
@@ -97,18 +106,14 @@ function briscolaExample(titleValue) {
 
 function pokerExample(titleValue) {
   const svg = baseSvg(titleValue);
-  const labels = [
-    ["K", "♣", "#1f2923"],
-    ["K", "♦", "#a64032"],
-    ["K", "♥", "#a64032"],
-    ["7", "♠", "#1f2923"],
-    ["7", "♣", "#1f2923"]
+  const cards = [
+    { rank: "K", suit: "clubs" },
+    { rank: "K", suit: "diamonds" },
+    { rank: "K", suit: "hearts" },
+    { rank: "7", suit: "spades" },
+    { rank: "7", suit: "clubs" }
   ];
-  labels.forEach(([label, suit, color], index) => {
-    const group = card(15 + index * 58, 40, label, suit, color, index - 2);
-    group.setAttribute("transform", `translate(${15 + index * 58} 40) scale(.72) rotate(${index - 2} 38 52)`);
-    svg.append(group);
-  });
+  cards.forEach((cardValue, index) => svg.append(imageCard(15 + index * 58, 42, cardValue, "french", { width: 53, height: 90, rotate: index - 2 })));
   add(svg, text(160, 158, "K-K-K + 7-7: full house", { "text-anchor": "middle", "font-size": 13 }));
   return svg;
 }
@@ -116,9 +121,7 @@ function pokerExample(titleValue) {
 function burracoExample(titleValue) {
   const svg = baseSvg(titleValue);
   [4, 5, 6, 7, 8, 9, 10].forEach((value, index) => {
-    const group = card(12 + index * 42, 48, String(value), "♥", "#a64032");
-    group.setAttribute("transform", `translate(${12 + index * 42} 48) scale(.55)`);
-    svg.append(group);
+    svg.append(imageCard(11 + index * 42, 48, { rank: String(value), suit: "hearts" }, "french", { width: 42, height: 74 }));
   });
   add(svg, text(160, 154, "Sette carte consecutive, nessuna matta", { "text-anchor": "middle", "font-size": 13 }));
   return svg;
