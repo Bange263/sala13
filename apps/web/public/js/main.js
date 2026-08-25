@@ -27,7 +27,12 @@ const state = {
 
 const gameById = new Map(GAME_CATALOG.map((game) => [game.id, game]));
 const infoModal = createInfoModal(GAME_CATALOG);
-const socket = window.io({ transports: ["websocket", "polling"] });
+// Always follow the address used to open the page. A LAN, Tailscale, ZeroTier,
+// ngrok or domain client must never be redirected to its own localhost.
+const socket = window.io(window.location.origin, {
+  path: "/socket.io",
+  transports: ["websocket", "polling"]
+});
 
 const elements = {
   homeView: document.querySelector("#home-view"),

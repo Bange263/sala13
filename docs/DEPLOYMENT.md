@@ -209,6 +209,17 @@ address with `ipconfig`, and create a Windows Defender Firewall inbound rule for
 TCP 3000 limited to the Private profile/local subnet. Do not create a router
 port forward.
 
+The project includes an idempotent setup command. Run it once from an
+Administrator PowerShell in the repository root:
+
+```powershell
+npm run setup:lan:windows
+```
+
+After `npm start`, use one of the LAN/VPN URLs printed by Sala13. Every player
+uses the address of the computer hosting Sala13; a player's own IP cannot route
+to the server unless that player is also the host.
+
 For remote classmates, install Tailscale on Windows, sign in, and from an
 Administrator PowerShell run the current Serve command:
 

@@ -4,6 +4,13 @@ The project is intentionally split into vertical slices. A “finished” engine
 includes server rules, private projections, tests, browser UI, reconnect and
 Info—not only a board that can be clicked.
 
+## v0.3.1 LAN/VPN connectivity checkpoint
+
+- the server continues to bind to every IPv4 interface by default;
+- Socket.IO now explicitly follows the browser origin instead of relying on an implicit default;
+- startup prints the usable LAN, Tailscale and ZeroTier addresses;
+- Windows hosts have an idempotent Private-profile firewall setup command.
+
 ## v0.3 visual-table checkpoint
 
 Every mode now uses a dedicated responsive table instead of generic text

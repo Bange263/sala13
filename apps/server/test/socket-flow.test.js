@@ -42,6 +42,20 @@ function nextRoomState(socket, predicate = () => true) {
   });
 }
 
+test("wildcard binding is reachable without using localhost as the server host", async (context) => {
+  const application = createApplication({ ...testConfig, host: "0.0.0.0" });
+  await new Promise((resolve) => application.httpServer.listen(0, "0.0.0.0", resolve));
+  context.after(async () => application.close());
+
+  const address = application.httpServer.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/api/health`);
+  const health = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(health.ok, true);
+  assert.equal(health.version, "0.3.1");
+});
+
 test("two real Socket.IO clients can create, join and play a move", async (context) => {
   const application = createApplication(testConfig);
   await new Promise((resolve) => application.httpServer.listen(0, "127.0.0.1", resolve));

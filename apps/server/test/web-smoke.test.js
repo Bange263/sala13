@@ -16,6 +16,8 @@ test("main UI uses authoritative start eligibility and the universal game render
   assert.match(source, /renderGame\(elements\.gameStage/);
   assert.match(source, /game-renderer-v2\.js/);
   assert.match(source, /Pronto ✓ · annulla/);
+  assert.match(source, /window\.io\(window\.location\.origin/);
+  assert.doesNotMatch(source, /window\.io\(["'`]https?:\/\/localhost/);
 });
 
 test("visual game tables ship complete local card decks and a leaderboard for every mode", async () => {

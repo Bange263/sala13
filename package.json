@@ -1,6 +1,6 @@
 {
   "name": "sala13",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "A self-hosted real-time multiplayer game room for classrooms and friends.",
   "type": "module",
@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "npm run dev --workspace @sala13/server",
     "start": "npm run start --workspace @sala13/server",
+    "setup:lan:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/allow-windows-lan.ps1",
     "test": "npm run test --workspaces --if-present",
     "check": "node scripts/check-syntax.mjs"
   },

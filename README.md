@@ -50,9 +50,10 @@ npm ci
 npm start
 ```
 
-Open `http://localhost:3000`. A second device on the same LAN can use
-`http://SERVER_LAN_IP:3000`, provided the operating-system firewall allows TCP
-port 3000.
+The terminal prints every usable address. `http://localhost:3000` works only on
+the server computer. A second device on the same LAN must use the address of the
+computer running `npm start`, for example `http://192.168.1.42:3000` — never the
+guest device's own IP. Socket.IO always follows that same browser origin.
 
 Windows PowerShell equivalent:
 
@@ -61,6 +62,17 @@ Copy-Item .env.example .env
 npm ci
 npm start
 ```
+
+On Windows, open PowerShell as Administrator once and allow LAN traffic on the
+Private network profile:
+
+```powershell
+npm run setup:lan:windows
+```
+
+This creates only an inbound TCP rule for port 3000 and prints the URLs that
+other devices can open. Devices on different networks still need Tailscale,
+ZeroTier, a reverse proxy or another explicitly configured tunnel.
 
 Development mode restarts the server when backend files change:
 
