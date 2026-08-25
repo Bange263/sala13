@@ -1,7 +1,11 @@
 import { GAME_CATALOG } from "/shared/game-catalog.js";
 import { CLIENT_EVENTS, ERROR_CODES, SERVER_EVENTS } from "/shared/protocol.js";
+import { initializeDeviceMode } from "./components/device-mode.js";
 import { createInfoModal } from "./components/info-modal.js";
 import { renderGame } from "./games/game-renderer-v2.js";
+import { createUuid } from "./utils/id.js";
+
+initializeDeviceMode();
 
 const storageKeys = {
   playerId: "sala13.playerId",
@@ -12,7 +16,7 @@ const storageKeys = {
 function stablePlayerId() {
   const stored = localStorage.getItem(storageKeys.playerId);
   if (stored) return stored;
-  const generated = crypto.randomUUID();
+  const generated = createUuid();
   localStorage.setItem(storageKeys.playerId, generated);
   return generated;
 }

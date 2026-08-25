@@ -12,12 +12,18 @@ test("create-room close control never submits or validates the form", async () =
 
 test("main UI uses authoritative start eligibility and the universal game renderer", async () => {
   const source = await readFile(new URL("js/main.js", webRoot), "utf8");
+  const html = await readFile(new URL("index.html", webRoot), "utf8");
   assert.match(source, /room\.startEligibility\?\.canStart/);
   assert.match(source, /renderGame\(elements\.gameStage/);
   assert.match(source, /game-renderer-v2\.js/);
   assert.match(source, /Pronto ✓ · annulla/);
   assert.match(source, /window\.io\(window\.location\.origin/);
   assert.doesNotMatch(source, /window\.io\(["'`]https?:\/\/localhost/);
+  assert.match(source, /createUuid\(\)/);
+  assert.doesNotMatch(source, /crypto\.randomUUID\(\)/);
+  assert.match(html, /data-device-choice="mobile"/);
+  assert.match(html, /data-device-choice="desktop"/);
+  assert.match(html, /device-mode\.css/);
 });
 
 test("visual game tables ship complete local card decks and a leaderboard for every mode", async () => {
@@ -40,8 +46,21 @@ test("visual game tables ship complete local card decks and a leaderboard for ev
   assert.match(media, /assets\/cards\/napoletane/);
   assert.match(renderer, /chip-tray/);
   assert.match(renderer, /drawing-message/);
+  assert.doesNotMatch(renderer, /crypto\.randomUUID\(\)/);
   assert.ok((renderer.match(/leaderboard\(room/g) ?? []).length >= 13);
   assert.match(css, /\.blackjack-felt/);
   assert.match(css, /\.italian-card-table/);
   assert.match(css, /\.poker-oval/);
+});
+
+test("device chooser ships icon controls and explicit mobile table overrides", async () => {
+  const html = await readFile(new URL("index.html", webRoot), "utf8");
+  const css = await readFile(new URL("device-mode.css", webRoot), "utf8");
+  assert.match(html, /data-device-choice="mobile"[\s\S]*?<svg/);
+  assert.match(html, /data-device-choice="desktop"[\s\S]*?<svg/);
+  assert.match(html, /id="device-mode-switch"/);
+  assert.match(css, /data-device-mode="mobile"[^}]*\.room-layout/);
+  assert.match(css, /data-device-mode="mobile"[^}]*\.game-v2-layout/);
+  assert.match(css, /data-device-mode="mobile"[^}]*\.leaderboard-list/);
+  assert.match(css, /data-device-mode="mobile"[^}]*\.canvas-toolbar-v2/);
 });

@@ -74,6 +74,11 @@ This creates only an inbound TCP rule for port 3000 and prints the URLs that
 other devices can open. Devices on different networks still need Tailscale,
 ZeroTier, a reverse proxy or another explicitly configured tunnel.
 
+Sala13 also works when opened from a plain HTTP LAN address. Player and drawing
+IDs do not rely on secure-context-only browser APIs. On every page entry, a
+Telefono/Computer chooser applies the matching touch targets, table flow and
+leaderboard layout; the choice can be reopened from the header.
+
 Development mode restarts the server when backend files change:
 
 ```bash

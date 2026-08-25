@@ -4,6 +4,15 @@ The project is intentionally split into vertical slices. A “finished” engine
 includes server rules, private projections, tests, browser UI, reconnect and
 Info—not only a board that can be clicked.
 
+## v0.3.2 LAN browser and device-layout checkpoint
+
+- player and drawing identifiers work over plain HTTP LAN/VPN origins where
+  `crypto.randomUUID` is unavailable;
+- an icon-based Telefono/Computer gate appears on entry and remains switchable
+  from the header;
+- mobile mode uses a single-column room, touch-sized controls, compact cards,
+  full-width actions and a stacked leaderboard.
+
 ## v0.3.1 LAN/VPN connectivity checkpoint
 
 - the server continues to bind to every IPv4 interface by default;

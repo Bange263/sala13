@@ -1,4 +1,5 @@
 import { renderTicTacToe } from "./tic-tac-toe.js";
+import { createUuid } from "../utils/id.js";
 
 const SUITS = Object.freeze({
   hearts: "♥", diamonds: "♦", clubs: "♣", spades: "♠",
@@ -581,7 +582,7 @@ function canvasTool(strokes, enabled, send) {
     canvas.addEventListener("pointerup", async () => {
       if (!points) return;
       if (points.length === 1) points.push({ ...points[0], x: Math.min(1, points[0].x + 0.001) });
-      const stroke = { id: crypto.randomUUID(), tool: eraser.checked ? "eraser" : "brush", color: color.value, size: Number(size.value), points };
+      const stroke = { id: createUuid(), tool: eraser.checked ? "eraser" : "brush", color: color.value, size: Number(size.value), points };
       points = null;
       await send({ type: "stroke", stroke });
     });

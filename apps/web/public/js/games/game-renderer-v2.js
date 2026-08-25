@@ -1,4 +1,5 @@
 import { cardElement, cardRow, coveredCards, chipElement, chipStack } from "./card-media.js";
+import { createUuid } from "../utils/id.js";
 import {
   actionBar,
   control,
@@ -875,7 +876,7 @@ function canvasTool(strokes, enabled, send) {
     const finishStroke = async () => {
       if (!points) return;
       if (points.length === 1) points.push({ ...points[0], x: Math.min(1, points[0].x + 0.001) });
-      const stroke = { id: crypto.randomUUID(), tool: erasing ? "eraser" : "brush", color: activeColor, size: brushSize, points };
+      const stroke = { id: createUuid(), tool: erasing ? "eraser" : "brush", color: activeColor, size: brushSize, points };
       points = null;
       await send({ type: "stroke", stroke });
     };

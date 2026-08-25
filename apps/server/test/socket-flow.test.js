@@ -53,7 +53,13 @@ test("wildcard binding is reachable without using localhost as the server host",
 
   assert.equal(response.status, 200);
   assert.equal(health.ok, true);
-  assert.equal(health.version, "0.3.1");
+  assert.equal(health.version, "0.3.2");
+
+  for (const path of ["/", "/device-mode.css", "/js/components/device-mode.js", "/js/utils/id.js"]) {
+    const asset = await fetch(`http://127.0.0.1:${address.port}${path}`);
+    assert.equal(asset.status, 200, path);
+    assert.ok((await asset.text()).length > 0, path);
+  }
 });
 
 test("two real Socket.IO clients can create, join and play a move", async (context) => {

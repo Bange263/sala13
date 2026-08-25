@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="it" data-device-mode="pending" data-device-selecting="true">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,18 +11,62 @@
     <title>Sala13 — giochi allo stesso tavolo, ovunque</title>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/game-tables.css" />
+    <link rel="stylesheet" href="/device-mode.css" />
     <script src="/socket.io/socket.io.js" defer></script>
     <script type="module" src="/js/main.js"></script>
   </head>
   <body>
+    <section class="device-gate" id="device-gate" role="dialog" aria-modal="true" aria-labelledby="device-gate-title">
+      <div class="device-gate-card">
+        <div class="device-gate-brand" aria-hidden="true"><span>13</span><strong>Sala13</strong></div>
+        <div>
+          <p class="section-kicker">Configura la visualizzazione</p>
+          <h1 id="device-gate-title">Da dove stai giocando?</h1>
+          <p class="device-gate-copy">La scelta modifica dimensioni, comandi e disposizione dei tavoli. Potrai cambiarla quando vuoi.</p>
+        </div>
+        <div class="device-choice-grid">
+          <button class="device-choice" type="button" data-device-choice="mobile">
+            <span class="device-choice-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" role="img">
+                <rect x="18" y="5" width="28" height="54" rx="7"></rect>
+                <path d="M27 12h10M29 52h6"></path>
+              </svg>
+            </span>
+            <span class="device-choice-text"><strong>Telefono</strong><small>Comandi grandi e tavoli in colonna</small></span>
+            <span class="device-choice-status" data-device-recommendation hidden>Consigliato</span>
+          </button>
+          <button class="device-choice" type="button" data-device-choice="desktop">
+            <span class="device-choice-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" role="img">
+                <rect x="5" y="8" width="54" height="38" rx="5"></rect>
+                <path d="M24 56h16M32 46v10"></path>
+              </svg>
+            </span>
+            <span class="device-choice-text"><strong>Computer</strong><small>Più spazio per tavolo e leaderboard</small></span>
+            <span class="device-choice-status" data-device-recommendation hidden>Consigliato</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <header class="site-header">
       <a class="brand" href="#" aria-label="Sala13, torna alla home">
         <span class="brand-mark" aria-hidden="true">13</span>
         <span>Sala13</span>
       </a>
-      <div class="connection-pill" id="connection-pill" data-state="connecting">
-        <span class="connection-dot" aria-hidden="true"></span>
-        <span id="connection-label">Connessione…</span>
+      <div class="header-actions">
+        <button class="device-mode-switch" id="device-mode-switch" type="button" aria-label="Cambia dispositivo">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2.5" y="4" width="13" height="10" rx="1.8"></rect>
+            <path d="M7 18h4M9 14v4"></path>
+            <rect x="17" y="7" width="4.5" height="10" rx="1.2"></rect>
+          </svg>
+          <span id="device-mode-label">Dispositivo</span>
+        </button>
+        <div class="connection-pill" id="connection-pill" data-state="connecting">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span id="connection-label">Connessione…</span>
+        </div>
       </div>
     </header>
 
